@@ -115,11 +115,13 @@ def level_selection_screen():
     font_mt = pygame.font.Font(None, 50)
     font_tips = pygame.font.Font(None, 20)
 
+    text_continue = font_tips.render('Продолж')
+
     manager = pygame_gui.ui_manager.UIManager((WIDTH, HEIGHT),
                                               'style/level_choose.json')
     w, h = 50, 50
     enter = pygame_gui.elements.UIButton(
-        relative_rect=pygame.Rect((WIDTH - w * 2, HEIGHT - h * 2),
+        relative_rect=pygame.Rect((WIDTH - 90, HEIGHT - 80),
                                   (w, h)),
         text='',
         manager=manager,

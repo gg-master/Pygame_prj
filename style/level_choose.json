@@ -3,26 +3,22 @@
      {
          "colours":
          {
-             "normal_bg": "#25292e",
-             "hovered_bg": "#35393e",
+             "normal_bg": "#e6f2f2",
+             "hovered_bg": "#89cccc",
              "disabled_bg": "#25292e",
              "selected_bg": "#25292e",
-             "active_bg": "#193784",
-             "normal_text": "#c5cbd8",
-             "hovered_text": "#FFFFFF",
-             "selected_text": "#FFFFFF",
-             "disabled_text": "#6d736f",
-             "active_text": "#6d736f",
+             "active_bg": "#35393e",
+
              "normal_border": "#AAAAAA",
              "hovered_border": "#B0B0B0",
              "disabled_border": "#808080",
              "selected_border": "#8080B0",
-             "active_border": "#8080B0"
+             "active_border": "#35393e"
          },
          "misc":
          {
             "shape": "rounded_rectangle",
-             "shape_corner_radius": "5"
+            "shape_corner_radius": "5"
          },
          "images":
          {
