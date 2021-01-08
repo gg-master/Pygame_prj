@@ -14,7 +14,9 @@ background.fill((0, 0, 0, 0))
 
 pygame.display.set_caption('Tanks Battle')
 
-manager = pygame_gui.ui_manager.UIManager((WIDTH, HEIGHT))
+maps = ['']
+
+path_for_sys_img = 'system_image/'
 
 
 def load_image(name, colorkey=None):
@@ -39,88 +41,234 @@ def terminate():
     sys.exit()
 
 
-class ChoiceScreen:
-    def __init__(self):
-        pass
-
-
-def choice_screen():
-    pass
-    # s_screen = pygame.Surface(screen.get_size())
-    # s_screen.set_alpha(255 // 3)
-    # fon = pygame.transform.scale(load_image('screen.png'), (WIDTH, HEIGHT))
-    # s_screen.blit(fon, (0, 0))
-    #
-    # tanks_battle = load_image('TanksBattle.png')
-    #
-    #
-    # clock = pygame.time.Clock()
-    #
-    #
-    #
-    # while True:
-    #
-    #     for event in pygame.event.get():
-    #         if event.type == pygame.QUIT:
-    #             terminate()
-    #         if event.type == pygame.USEREVENT:
-    #             if event.user_type == pygame_gui.UI_BUTTON_PRESSED:
-    #                 if event.ui_element == button1:
-    #                     print('Button1.pressed')
-    #         manager.process_events(event)
-    #     manager.update(time_delta)
-    #     screen.fill(pygame.color.Color('black'))
-    #     screen.blit(s_screen, (0, 0))
-    #     screen.blit(tanks_battle, (WIDTH // 4, 50))
-    #     manager.draw_ui(screen)
-    #     pygame.display.flip()
-    #     clock.tick(FPS)
-
-
-def start_screen():
-    time.sleep(1)
+def down_drop_text(surf, image, rect):
+    # Функция, которая опускает картинку с текстом из-за
+    # границы экрана в необходимое место
     clock = pygame.time.Clock()
+    y = -rect.height
+    y_to = 80
+    orig_surf = surf.copy()
+    while y < y_to:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                terminate()
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_KP_ENTER:
+                    return
+        y += 4
+        surf.blit(orig_surf, (0, 0))
+        surf.blit(image, (WIDTH // 2 - rect.width // 2, y))
 
-    fon = pygame.transform.scale(load_image('fon.jpg'), (WIDTH, HEIGHT))
+        screen.blit(surf, (0, 0))
+        pygame.display.flip()
+        clock.tick(FPS)
 
-    st_screen = pygame.Surface(screen.get_size())
-    bg_screen = pygame.Surface(screen.get_size())
-    bg_screen.blit(fon, (0, 0))
 
-    alpha_change_screen(background, bg_screen, alpha_to=int(255/3))
-    st_screen.blit(bg_screen, (0, 0))
+def alpha_change_screen(surf_from, surf_to, alpha_from=0,
+                        alpha_to=255, speed=1):
+    # Функция, меняющаяя местами окна, путем мзенения альфа канала
+    # speed - подразумевает под собой скорость изменеия альфа каналов
+    surf_from.set_alpha(255)
+    surf_to.set_alpha(0)
 
-    tanks_battle = load_image('TanksBattle.png')
-    tanks_battle_rect = tanks_battle.get_rect()
+    clock = pygame.time.Clock()
+    alpha = 255
+    alpha2 = 0
 
-    down_drop_text(screen, tanks_battle, tanks_battle_rect)
+    while alpha2 < alpha_to and alpha > alpha_from:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                terminate()
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_KP_ENTER:
+                    surf_to.set_alpha(alpha_to)
+                    screen.blit(surf_to, (0, 0))
+                    return
+        # Reduce alpha each frame.
+        alpha2 += speed
+        alpha2 = min(255, alpha2)
 
-    game_for_one, game_for_two, game_for_two_online, settings, rules \
-        = create_buttons(manager)
+        alpha -= speed
+        alpha = max(0, alpha)
 
-    w_entry, h_entry = 150, 150
-    entry = pygame_gui.elements.UITextEntryLine(
-        relative_rect=pygame.rect.Rect((WIDTH // 2 - w_entry // 2, HEIGHT // 2 - h_entry // 2), (w_entry, h_entry)),
-        manager=manager
+        # surf_from.set_alpha(alpha)
+        surf_to.set_alpha(alpha2)
+        screen.blit(surf_from, (0, 0))
+        screen.blit(surf_to, (0, 0))
+
+        pygame.display.flip()
+        clock.tick(FPS)
+
+
+def scale_sys_image(image):
+    # scale_W_to = 50
+    # img_rect = image.get_rect()
+    # img = pygame.transform.scale(image, ())
+    return image
+
+
+def level_selection_screen():
+    clock = pygame.time.Clock()
+    nw_screen = pygame.Surface(screen.get_size())
+    count = 1
+
+    font_mt = pygame.font.Font(None, 50)
+    font_tips = pygame.font.Font(None, 20)
+
+    manager = pygame_gui.ui_manager.UIManager((WIDTH, HEIGHT),
+                                              'style/level_choose.json')
+    w, h = 50, 50
+    enter = pygame_gui.elements.UIButton(
+        relative_rect=pygame.Rect((WIDTH - w * 2, HEIGHT - h * 2),
+                                  (w, h)),
+        text='',
+        manager=manager,
+        object_id='enter'
     )
     while True:
         time_delta = clock.tick(60) / 1000.0
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 terminate()
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_ESCAPE:
+                    return
+                if event.key == pygame.K_DOWN:
+                    if count > 1:
+                        count -= 1
+                if event.key == pygame.K_UP:
+                    if count < len(maps):
+                        count += 1
+            manager.process_events(event)
+        manager.update(time_delta)
+
+        nw_screen.fill((115, 117, 115))
+        text = font_mt.render(f'Уровень {count}', True, pygame.color.Color('white'))
+        nw_screen.blit(text, (
+            WIDTH // 2 - text.get_rect().width // 2,
+            HEIGHT // 2 - text.get_rect().height // 2))
+
+        manager.draw_ui(nw_screen)
+
+        screen.blit(nw_screen, (0, 0))
+        pygame.display.flip()
+        screen.fill(pygame.color.Color('black'))
+        clock.tick(FPS)
+
+
+def start_screen():
+    time.sleep(1)
+    clock = pygame.time.Clock()
+    manager = pygame_gui.ui_manager.UIManager((WIDTH, HEIGHT))
+
+    fon = pygame.transform.scale(load_image('fon3.png'), (WIDTH, HEIGHT))
+
+    # Создаем несколько поверхностей, для отрисовки чуть
+    # более темного фона и основных кнопок
+    st_screen = pygame.Surface(screen.get_size())
+    bg_screen = pygame.Surface(screen.get_size())
+    # Отрисоввываем на заднюю поверхность фоновую картинку
+    bg_screen.blit(fon, (0, 0))
+
+    # Анимация плавного появления окна
+    # Реализовано через изменение альфа каналов
+    alpha_change_screen(background, bg_screen, alpha_to=int(255/3))
+    # Отрисовываем на основную поверхность задний фон
+    st_screen.blit(bg_screen, (0, 0))
+
+    # Создаем картинку с надписью названия игры
+    tanks_battle = load_image('TanksBattle.png')
+    tanks_battle_rect = tanks_battle.get_rect()
+    # Анимация плавного появления текста из-за верхней границы экрана
+    down_drop_text(screen, tanks_battle, tanks_battle_rect)
+    # Создание кнопок на экране
+    # TODO оптимизировать создание кнопок
+    game_for_one, game_for_two, game_for_two_online, settings, rules \
+        = create_buttons(manager)
+
+    # text_box = pygame_gui.elements.UITextBox(
+    #     html_text='12345647891234564789123456478912345647891234564789'
+    #               '12345647891234564789123456478912345647891234564789'
+    #               '12345647891234564789123456478912345647891234564789'
+    #               '12345647891234564789123456478912345647891234564789'
+    #               '12345647891234564789123456478912345647891234564789'
+    #               '12345647891234564789123456478912345647891234564789',
+    #     relative_rect=pygame.Rect((400, 400), (150, 150)),
+    #     manager=manager,
+    #     object_id=15,
+    # )
+    # sc = pygame_gui.elements.UIScrollingContainer(
+    #     relative_rect=pygame.Rect((10, 10), (450, 450)),
+    #     manager=manager,
+    # )
+    # # wind = pygame_gui.elements.UIWindow(
+    # #     rect=pygame.Rect((400, 400), (150, 150)),
+    # #     manager=manager,
+    # #     element_id=15,
+    # # )
+    # sl = pygame_gui.elements.UISelectionList(
+    #     relative_rect=pygame.Rect((20, 20), (300, 300)),
+    #     item_list=['text_box, "15"', 'asd asd', 'asd asddsas'],
+    #     manager=manager,
+    #     container=sc,
+    #
+    # )
+    # ui_p = pygame_gui.elements.UIPanel(
+    #     relative_rect=pygame.Rect((400, 400), (150, 150)),
+    #     starting_layer_height=1,
+    #     manager=manager,
+    #
+    # )
+    # sb = pygame_gui.elements.UIVerticalScrollBar(
+    #     relative_rect=pygame.Rect((400, 400), (150, 150)),
+    #     manager=manager,
+    #     visible_percentage=0.1
+    # )
+    # h_s = pygame_gui.elements.UIHorizontalSlider(
+    #     relative_rect=pygame.Rect((400, 400), (150, 150)),
+    #     start_value=0.1,
+    #     value_range=(0.1, 10),
+    #     manager=manager
+    # )
+    run = True
+    while run:
+        # Установка таймера для  корректной работы pygame_gui менеджера
+        time_delta = clock.tick(60) / 1000.0
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                # Перед закрытием окна узаем у пользователя,
+                # действительно ли он хочет закрыть окно
+                conf_dialog = pygame_gui.windows.UIConfirmationDialog(
+                    rect=pygame.Rect(
+                        (WIDTH // 2 - 150, HEIGHT // 2 - 100), (300, 200)),
+                    manager=manager,
+                    window_title='Подтверждение',
+                    action_long_desc='Вы уверены, что хотите выйти?',
+                    action_short_name='Ok',
+                    blocking=True
+                )
             if event.type == pygame.USEREVENT:
+                # Узнаем были ли нажаты какие-либо кнопки на экране
+                if event.user_type == \
+                        pygame_gui.UI_CONFIRMATION_DIALOG_CONFIRMED:
+                    run = False
+                    terminate()
                 if event.user_type == pygame_gui.UI_BUTTON_PRESSED:
                     if event.ui_element == game_for_one:
-                        print('Button1.pressed')
+                        level_selection_screen()
+                    if event.ui_element == rules:
+                        print('rules')
             manager.process_events(event)
+
+        # Обновление экрана
         screen.fill(pygame.color.Color('black'))
         st_screen.fill((0, 0, 0))
 
         manager.update(time_delta)
+        # Отрисовка всех элементов последовательно
         st_screen.blit(bg_screen, (0, 0))
         st_screen.blit(tanks_battle, (
             WIDTH // 2 - tanks_battle_rect.width // 2, 80))
-        # st_screen.blit(text, (WIDTH // 2 - text.get_rect().width // 2, 250))
 
         manager.draw_ui(st_screen)
 
@@ -169,63 +317,17 @@ def create_buttons(manager):
     return b1, b2, b3, b4, b5
 
 
-def down_drop_text(surf, image, rect):
-    # Функция, которая опускает картинку с текстом из-за
-    # границы экрана в необходимое место
-    clock = pygame.time.Clock()
-    y = -rect.height
-    y_to = 80
-    orig_surf = surf.copy()
-    while y < y_to:
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                terminate()
-        y += 4
-        surf.blit(orig_surf, (0, 0))
-        surf.blit(image, (WIDTH // 2 - rect.width // 2, y))
-
-        screen.blit(surf, (0, 0))
-        pygame.display.flip()
-        clock.tick(FPS)
-
-
-def alpha_change_screen(surf_from, surf_to, alpha_from=0,
-                        alpha_to=255, speed=1):
-    # Функция, меняющаяя местами окна, путем мзенения альфа канала
-    surf_from.set_alpha(255)
-    surf_to.set_alpha(0)
-
-    clock = pygame.time.Clock()
-    alpha = 255
-    alpha2 = 0
-
-    while alpha2 < alpha_to and alpha > alpha_from:
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                terminate()
-        # Reduce alpha each frame.
-        alpha2 += speed
-        alpha2 = min(255, alpha2)
-
-        alpha -= speed
-        alpha = max(0, alpha)
-
-        # surf_from.set_alpha(alpha)
-        surf_to.set_alpha(alpha2)
-        screen.blit(surf_from, (0, 0))
-        screen.blit(surf_to, (0, 0))
-
-        pygame.display.flip()
-        clock.tick(FPS)
-
-
 def main():
     clock = pygame.time.Clock()
     running = True
 
-    start_screen()
-    choice_screen()
+    # Фунция, с главным игровым циклом.
+    # Сначала закружается стартовый экран с выбором типа игры,
+    # ознакомления с правилами и настрокой игры(громкости, и тд)
 
+    # Далее выбираем уровень игры. Далее запускаем игровой цикл,
+    # в зависимости от выбранного типа игры
+    start_screen()
     while running:
         # screen.fill(pygame.Color('white'))
         screen.blit(background, (0, 0))
