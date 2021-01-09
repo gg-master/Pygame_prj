@@ -110,45 +110,88 @@ def scale_sys_image(image):
 def level_selection_screen():
     clock = pygame.time.Clock()
     nw_screen = pygame.Surface(screen.get_size())
-    count = 1
+    count = 1  # счетчик выбора уровня
 
     font_mt = pygame.font.Font(None, 50)
     font_tips = pygame.font.Font(None, 20)
 
-    text_continue = font_tips.render('Продолж')
+    text_continue = font_tips.render(
+        'Продолжить', True, (255, 255, 255))
+    text_celect = font_tips.render(
+        'Выбрать', True, (255, 255, 255))
 
     manager = pygame_gui.ui_manager.UIManager((WIDTH, HEIGHT),
                                               'style/level_choose.json')
-    w, h = 50, 50
+    # TODO вывести создание кнопок в отдельную функцию. Сделать грамотно
+    w, h = 30, 30
     enter = pygame_gui.elements.UIButton(
         relative_rect=pygame.Rect((WIDTH - 90, HEIGHT - 80),
                                   (w, h)),
         text='',
         manager=manager,
-        object_id='enter'
-    )
+        object_id='enter')
+    arrow1 = pygame_gui.elements.UIButton(
+        relative_rect=pygame.Rect((WIDTH - 90 - 130, HEIGHT - 80),
+                                  (w, h)),
+        text='',
+        manager=manager,
+        object_id='arrow1')
+    arrow2 = pygame_gui.elements.UIButton(
+        relative_rect=pygame.Rect((WIDTH - 90 - 130 - w, HEIGHT - 80),
+                                  (w, h)),
+        text='',
+        manager=manager,
+        object_id='arrow2')
+    escape = pygame_gui.elements.UIButton(
+        relative_rect=pygame.Rect((WIDTH - 90 - 260, HEIGHT - 80),
+                                  (w, h)),
+        text='',
+        manager=manager,
+        object_id='escape')
+    # TODO Дописать кнопку escape
     while True:
         time_delta = clock.tick(60) / 1000.0
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 terminate()
             if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_ESCAPE:
-                    return
                 if event.key == pygame.K_DOWN:
                     if count > 1:
                         count -= 1
                 if event.key == pygame.K_UP:
                     if count < len(maps):
                         count += 1
+                if event.key == pygame.K_KP_ENTER:
+                    return count, nw_screen
+                if event.key == pygame.K_ESCAPE:
+                    return
+            if event.type == pygame.USEREVENT:
+                if event.user_type == pygame_gui.UI_BUTTON_PRESSED:
+                    if event.ui_element == arrow1:
+                        if count > 1:
+                            count -= 1
+                    if event.ui_element == arrow2:
+                        if count < len(maps):
+                            count += 1
+                    if event.ui_element == enter:
+                        return count, nw_screen
+                    if event.ui_element == escape:
+                        return
             manager.process_events(event)
         manager.update(time_delta)
 
         nw_screen.fill((115, 117, 115))
-        text = font_mt.render(f'Уровень {count}', True, pygame.color.Color('white'))
+        text = font_mt.render(f'Уровень {count}', True,
+                              pygame.color.Color('white'))
         nw_screen.blit(text, (
             WIDTH // 2 - text.get_rect().width // 2,
             HEIGHT // 2 - text.get_rect().height // 2))
+        nw_screen.blit(text_continue, (
+            WIDTH - text_continue.get_rect().width - 95,
+            HEIGHT - text_continue.get_rect().height - 58))
+        nw_screen.blit(text_celect, (
+            WIDTH - text_celect.get_rect().width - 255,
+            HEIGHT - text_celect.get_rect().height - 58))
 
         manager.draw_ui(nw_screen)
 
@@ -188,50 +231,6 @@ def start_screen():
     game_for_one, game_for_two, game_for_two_online, settings, rules \
         = create_buttons(manager)
 
-    # text_box = pygame_gui.elements.UITextBox(
-    #     html_text='12345647891234564789123456478912345647891234564789'
-    #               '12345647891234564789123456478912345647891234564789'
-    #               '12345647891234564789123456478912345647891234564789'
-    #               '12345647891234564789123456478912345647891234564789'
-    #               '12345647891234564789123456478912345647891234564789'
-    #               '12345647891234564789123456478912345647891234564789',
-    #     relative_rect=pygame.Rect((400, 400), (150, 150)),
-    #     manager=manager,
-    #     object_id=15,
-    # )
-    # sc = pygame_gui.elements.UIScrollingContainer(
-    #     relative_rect=pygame.Rect((10, 10), (450, 450)),
-    #     manager=manager,
-    # )
-    # # wind = pygame_gui.elements.UIWindow(
-    # #     rect=pygame.Rect((400, 400), (150, 150)),
-    # #     manager=manager,
-    # #     element_id=15,
-    # # )
-    # sl = pygame_gui.elements.UISelectionList(
-    #     relative_rect=pygame.Rect((20, 20), (300, 300)),
-    #     item_list=['text_box, "15"', 'asd asd', 'asd asddsas'],
-    #     manager=manager,
-    #     container=sc,
-    #
-    # )
-    # ui_p = pygame_gui.elements.UIPanel(
-    #     relative_rect=pygame.Rect((400, 400), (150, 150)),
-    #     starting_layer_height=1,
-    #     manager=manager,
-    #
-    # )
-    # sb = pygame_gui.elements.UIVerticalScrollBar(
-    #     relative_rect=pygame.Rect((400, 400), (150, 150)),
-    #     manager=manager,
-    #     visible_percentage=0.1
-    # )
-    # h_s = pygame_gui.elements.UIHorizontalSlider(
-    #     relative_rect=pygame.Rect((400, 400), (150, 150)),
-    #     start_value=0.1,
-    #     value_range=(0.1, 10),
-    #     manager=manager
-    # )
     run = True
     while run:
         # Установка таймера для  корректной работы pygame_gui менеджера
@@ -257,7 +256,10 @@ def start_screen():
                     terminate()
                 if event.user_type == pygame_gui.UI_BUTTON_PRESSED:
                     if event.ui_element == game_for_one:
-                        level_selection_screen()
+                        rez = level_selection_screen()
+                        print(rez)
+                        if rez is not None:
+                            return '1', rez[0], rez[1]
                     if event.ui_element == rules:
                         print('rules')
             manager.process_events(event)
@@ -329,7 +331,13 @@ def main():
 
     # Далее выбираем уровень игры. Далее запускаем игровой цикл,
     # в зависимости от выбранного типа игры
-    start_screen()
+    type_game, level, select_screen = start_screen()
+    # После получения типа игры и уровня,
+    # мы должны в течении нескольких секунд
+    # показывать экран с выбором уровня и проигрывать музыку
+    # TODO делать счетчик на "зависание" экрана
+    #  с выбором уровня. Паралельно включив музыку
+    print(type_game, level)
     while running:
         # screen.fill(pygame.Color('white'))
         screen.blit(background, (0, 0))
@@ -337,6 +345,7 @@ def main():
             if event.type == pygame.QUIT:
                 running = False
 
+        screen.blit(select_screen, (0, 0))
         pygame.display.flip()
         clock.tick(FPS)
     pygame.quit()
