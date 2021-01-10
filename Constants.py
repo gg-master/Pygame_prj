@@ -2,6 +2,7 @@
 WIDTH = 950
 HEIGHT = 750
 FPS = 60
+CAPTION = 'Tanks Battle'
 MAIN_TANK_1_SKIN_PATH = 'путь к скину главного танка'
 MAIN_TANK_2_SKIN_PATH = 'путь к скину второго главного танка'
 BOT_LITE_TANK_SKIN_PATH = 'путь к скину легкого танка'

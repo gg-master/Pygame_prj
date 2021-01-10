@@ -3,7 +3,6 @@ import pygame_gui
 import sys
 import os
 import time
-# I was here again
 
 WIDTH, HEIGHT = 950, 750
 FPS = 60
