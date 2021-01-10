@@ -1,6 +1,6 @@
 # 'NS'(Not Stated) - те значения, которые еще пока не указаны
-WIDTH = 950
-HEIGHT = 750
+WIDTH = 1920
+HEIGHT = 1080
 FPS = 60
 CAPTION = 'Tanks Battle'
 MAIN_TANK_1_SKIN_PATH = 'путь к скину главного танка'

@@ -3,8 +3,9 @@ import pygame_gui
 import sys
 import os
 import time
+from constants import WIDTH, HEIGHT
 
-WIDTH, HEIGHT = 950, 750
+
 FPS = 60
 pygame.init()
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
@@ -206,7 +207,7 @@ def start_screen():
     clock = pygame.time.Clock()
     manager = pygame_gui.ui_manager.UIManager((WIDTH, HEIGHT))
 
-    fon = pygame.transform.scale(load_image('fon3.png'), (WIDTH, HEIGHT))
+    fon = pygame.transform.scale(load_image('fon5.png'), (WIDTH, HEIGHT))
 
     # Создаем несколько поверхностей, для отрисовки чуть
     # более темного фона и основных кнопок
