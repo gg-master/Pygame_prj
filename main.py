@@ -346,6 +346,7 @@ def main():
                 running = False
 
         screen.blit(select_screen, (0, 0))
+
         pygame.display.flip()
         clock.tick(FPS)
     pygame.quit()

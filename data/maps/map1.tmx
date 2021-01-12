@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<map version="1.4" tiledversion="1.4.3" orientation="orthogonal" renderorder="right-down" width="13" height="13" tilewidth="80" tileheight="80" infinite="0" nextlayerid="10" nextobjectid="110">
+<map version="1.4" tiledversion="1.4.3" orientation="orthogonal" renderorder="right-down" width="13" height="13" tilewidth="80" tileheight="80" infinite="0" nextlayerid="10" nextobjectid="132">
  <tileset firstgid="1" source="tileds.tsx"/>
  <layer id="1" name="земля, вода и железнае блоки" width="13" height="13">
   <data encoding="base64" compression="zlib">
-   eJwTZGBgEIRiRjxYkMrqaI2ZSJDnJVEPLx31DGQYEhPGhPyCrhZdjwCaOgEsegC2vgGw
+   eJwTZGBgEIRiRjxYkMrqRvEoBmEBAnwQBgBJ/gFY
   </data>
  </layer>
  <layer id="2" name="деревья" width="13" height="13">
@@ -77,5 +77,27 @@
   <object id="104" gid="3" x="640" y="240" width="80" height="80"/>
   <object id="106" gid="5" x="320" y="240" width="80" height="80"/>
   <object id="109" gid="7" x="480" y="80" width="80" height="80"/>
+  <object id="110" gid="2" x="960" y="960" width="80" height="80"/>
+  <object id="111" gid="2" x="960" y="1040" width="80" height="80"/>
+  <object id="112" gid="2" x="880" y="1040" width="80" height="80"/>
+  <object id="113" gid="2" x="880" y="960" width="80" height="80"/>
+  <object id="114" gid="2" x="0" y="1040" width="80" height="80"/>
+  <object id="115" gid="2" x="0" y="960" width="80" height="80"/>
+  <object id="116" gid="2" x="80" y="960" width="80" height="80"/>
+  <object id="117" gid="2" x="80" y="1040" width="80" height="80"/>
+  <object id="118" gid="2" x="160" y="640" width="80" height="80"/>
+  <object id="119" gid="2" x="160" y="560" width="80" height="80"/>
+  <object id="120" gid="2" x="160" y="480" width="80" height="80"/>
+  <object id="121" gid="2" x="160" y="400" width="80" height="80"/>
+  <object id="122" gid="2" x="800" y="640" width="80" height="80"/>
+  <object id="123" gid="2" x="800" y="560" width="80" height="80"/>
+  <object id="124" gid="2" x="800" y="480" width="80" height="80"/>
+  <object id="125" gid="2" x="800" y="400" width="80" height="80"/>
+  <object id="126" gid="13" x="960" y="480" width="80" height="80"/>
+  <object id="127" gid="13" x="960" y="560" width="80" height="80"/>
+  <object id="128" gid="13" x="960" y="640" width="80" height="80"/>
+  <object id="129" gid="13" x="0" y="640" width="80" height="80"/>
+  <object id="130" gid="13" x="0" y="560" width="80" height="80"/>
+  <object id="131" gid="13" x="0" y="480" width="80" height="80"/>
  </objectgroup>
 </map>
