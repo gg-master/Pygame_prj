@@ -75,19 +75,19 @@ def load_image(name, colorkey=None):
 
 class Player(pygame.sprite.Sprite):
     images = {
-        '0_t': 't_y.png',
-        '0_l': 't_y_l.png',
-        '0_r': 't_y_r.png',
-        '0_b': 't_y_b.png',
-        '1_t': 't_g.png',
-        '1_l': 't_g_l.png',
-        '1_r': 't_g_r.png',
-        '1_b': 't_g_b.png',
+        '0_t0': 't_y.png', '0_l0': 't_y_l.png', '0_r0': 't_y_r.png',
+        '0_b0': 't_y_b.png',
+        '0_t1': 't_y1.png', '0_l1': 't_y1_l.png', '0_r1': 't_y1_r.png',
+        '0_b1': 't_y1_b.png',
+        '1_t0': 't_g.png', '1_l0': 't_g_l.png', '1_r0': 't_g_r.png',
+        '1_b0': 't_g_b.png',
+        '1_t1': 't_g1.png', '1_l1': 't_g1_l.png', '1_r1': 't_g1_r.png',
+        '1_b1': 't_g1_b.png',
     }
 
     def __init__(self, x, y, layer, tile_size, player):
         super().__init__()
-        self.type_tanks = 't2'
+        self.type_tanks = 't1'
         self.player = player
         self.side = 't'
         self.move_trigger = False
@@ -103,20 +103,19 @@ class Player(pygame.sprite.Sprite):
         self.rect.y = self.coords[1]
 
         self.layer = layer
-        self.speed = 4
+        self.speed = 2
         self.lives = 3
         self.hidden = False
         self.hide_timer = pygame.time.get_ticks()
         self.bullet = None
 
     def load_tanks_image(self):
-        image = load_image(f'{DIR_FOR_TANKS_IMG}'
-                           f'{self.type_tanks}\\'
-                           f'{self.images[f"{self.player}_{self.side}"]}'
+        self.move_trigger = not self.move_trigger
+        image = load_image(f'{DIR_FOR_TANKS_IMG}{self.type_tanks}\\'
+                           f'{self.images[f"{self.player}_{self.side}{int(self.move_trigger)}"]}'
                            if self.player == 0 else
-                           f'{DIR_FOR_TANKS_IMG}'
-                           f'{self.type_tanks}\\'
-                           f'{self.images[f"{self.player}_{self.side}"]}')
+                           f'{DIR_FOR_TANKS_IMG}{self.type_tanks}\\'
+                           f'{self.images[f"{self.player}_{self.side}{int(self.move_trigger)}"]}')
         self.image = pygame.transform.scale(image, (self.TILE_SIZE -
                                                     self.TILE_SIZE // 8,
                                                     self.TILE_SIZE -
@@ -132,14 +131,7 @@ class Player(pygame.sprite.Sprite):
         self.hide_timer = pygame.time.get_ticks()
         self.rect.center = (WIDTH / 2, HEIGHT + 200)
 
-    def update(self, walls):
-        if self.hidden and pygame.time.get_ticks() - self.hide_timer > 1000:
-            self.hidden = False
-            self.rect.centerx = WIDTH / 2
-            self.rect.bottom = HEIGHT - 10
-
-        keystate = pygame.key.get_pressed()
-
+    def move(self, keystate, walls):
         if keystate[pygame.K_UP]:
             self.side = 't'
             self.load_tanks_image()
@@ -148,7 +140,7 @@ class Player(pygame.sprite.Sprite):
                                             pygame.sprite.collide_mask)
             if c:
                 self.rect = self.rect.move(0, self.speed)
-        if keystate[pygame.K_DOWN]:
+        elif keystate[pygame.K_DOWN]:
             self.side = 'b'
             self.load_tanks_image()
             self.rect = self.rect.move(0, self.speed)
@@ -156,7 +148,7 @@ class Player(pygame.sprite.Sprite):
                                             pygame.sprite.collide_mask)
             if c:
                 self.rect = self.rect.move(0, -self.speed)
-        if keystate[pygame.K_LEFT]:
+        elif keystate[pygame.K_LEFT]:
             self.side = 'l'
             self.load_tanks_image()
             self.rect = self.rect.move(-self.speed, 0)
@@ -165,7 +157,7 @@ class Player(pygame.sprite.Sprite):
             if c:
                 self.rect = self.rect.move(self.speed, 0)
 
-        if keystate[pygame.K_RIGHT]:
+        elif keystate[pygame.K_RIGHT]:
             self.side = 'r'
             self.load_tanks_image()
             self.rect = self.rect.move(self.speed, 0)
@@ -174,16 +166,23 @@ class Player(pygame.sprite.Sprite):
             if c:
                 self.rect = self.rect.move(-self.speed, 0)
 
+    def update(self, walls):
+        if self.hidden and pygame.time.get_ticks() - self.hide_timer > 1000:
+            self.hidden = False
+            self.rect.centerx = WIDTH / 2
+            self.rect.bottom = HEIGHT - 10
+        keystate = pygame.key.get_pressed()
+        self.move(keystate, walls)
+
         if keystate[pygame.K_SPACE]:
-            # self.shoot()
-            pass
+            self.shoot()
 
     def shoot(self):
         now = pygame.time.get_ticks()
-        if self.bullet is None:
-            bullet = Bullet(self.rect.centerx, self.rect.top, self.side)
-            game.all_sprites.add(bullet)
-            game.bullets.add(bullet)
+        if self.bullet is None or not self.bullet.alive():
+            bullet = Bullet(self.rect, self.side)
+            bullet.add(game.all_sprites, game.bullets)
+            self.bullet = bullet
 
 
 class Bullet(pygame.sprite.Sprite):
@@ -194,19 +193,42 @@ class Bullet(pygame.sprite.Sprite):
         'b': 'b_b.png'
     }
 
-    def __init__(self, x, y, side: str):
+    def __init__(self, rect_tank, side: str):
         super().__init__()
-        self.image = load_image(DIR_FOR_TANKS_IMG + self.images[side])
+        self.image = load_image(f'{DIR_FOR_TANKS_IMG}'
+                                f'bullet\\{self.images[side]}')
         self.rect = self.image.get_rect()
-        self.rect.bottom = y
-        self.rect.centerx = x
-        self.speedy = -10
+        self.side = side
+        self.speed = 10
+        self.speedy, self.speedx = 0, 0
+        self.set_rect(rect_tank)
 
     def update(self):
-        self.rect.y += self.speedy
+        self.rect = self.rect.move(self.speedx, self.speedy)
         # удалить спрайт, если он заходит за верхнюю часть экрана
-        if self.rect.bottom < 0:
+        if self.rect.y < game.map.rect.y \
+                or self.rect.x < game.map.rect.x \
+                or self.rect.x > game.map.rect.right \
+                or self.rect.y > game.map.rect.bottom:
             self.kill()
+
+    def set_rect(self, rect_tank):
+        if self.side == 't':
+            self.rect.bottom = rect_tank.top
+            self.rect.centerx = rect_tank.centerx
+            self.speedy = -self.speed
+        if self.side == 'l':
+            self.rect.right = rect_tank.left
+            self.rect.centery = rect_tank.centery
+            self.speedx = -self.speed
+        if self.side == 'r':
+            self.rect.left = rect_tank.right
+            self.rect.centery = rect_tank.centery
+            self.speedx = self.speed
+        if self.side == 'b':
+            self.rect.top = rect_tank.bottom
+            self.rect.centerx = rect_tank.centerx
+            self.speedy = self.speed
 
 
 def convert_coords(x, tile_size):
@@ -220,6 +242,8 @@ class Map:
         self.width = self.map.width
         self.height = self.map.height
         self.koeff = self.map.tilewidth / self.TILE_SIZE
+        self.rect = pygame.rect.Rect((OFFSET, OFFSET),
+                                     (MAP_SIZE, MAP_SIZE))
 
     def get_tile_image(self, x, y, layer):
         image = self.map.get_tile_image(x, y, layer)
@@ -332,6 +356,7 @@ class Game:
 
     def update(self, events=None):
         self.player_group.update(self.wall_group)
+        self.bullets.update()
 
     def render(self):
         # Отрисовка по слоям.
