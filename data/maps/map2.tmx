@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<map version="1.4" tiledversion="1.4.3" orientation="orthogonal" renderorder="right-down" width="13" height="13" tilewidth="80" tileheight="80" infinite="0" nextlayerid="6" nextobjectid="24">
+ <tileset firstgid="1" source="tileds.tsx"/>
+ <layer id="1" name="земля" width="13" height="13">
+  <data encoding="base64" compression="zlib">
+   eJxjZGBgYBzFo3gQYwDjGACq
+  </data>
+ </layer>
+ <layer id="2" name="спавн игрков" width="13" height="13">
+  <data encoding="base64" compression="zlib">
+   eJxjYBgFo2BggQAONgwAAAXkACE=
+  </data>
+ </layer>
+ <layer id="3" name="спавн ботов" width="13" height="13">
+  <data encoding="base64" compression="zlib">
+   eJwTZGBgEIRifECQSHWjYBRQGwAABnsAZw==
+  </data>
+ </layer>
+ <layer id="5" name="деревья" width="13" height="13">
+  <data encoding="base64" compression="zlib">
+   eJxjYBgFo2BwAwACpAAB
+  </data>
+ </layer>
+ <objectgroup id="4" name="walls">
+  <object id="1" gid="11" x="240" y="480" width="80" height="80"/>
+  <object id="2" gid="10" x="400" y="480" width="80" height="80"/>
+  <object id="3" gid="9" x="560" y="480" width="80" height="80"/>
+  <object id="4" gid="8" x="640" y="640" width="80" height="80"/>
+  <object id="5" gid="7" x="480" y="720" width="80" height="80"/>
+  <object id="6" gid="6" x="320" y="720" width="80" height="80"/>
+  <object id="7" gid="5" x="160" y="640" width="80" height="80"/>
+  <object id="8" gid="4" x="160" y="880" width="80" height="80"/>
+  <object id="9" gid="3" x="320" y="880" width="80" height="80"/>
+  <object id="10" gid="2" x="480" y="880" width="80" height="80"/>
+  <object id="11" gid="18" x="640" y="880" width="80" height="80"/>
+  <object id="12" gid="23" x="720" y="800" width="80" height="80"/>
+  <object id="13" gid="11" x="240" y="400" width="80" height="80"/>
+  <object id="15" gid="11" x="720" y="320" width="80" height="80"/>
+  <object id="16" gid="11" x="800" y="320" width="80" height="80"/>
+  <object id="17" gid="11" x="240" y="320" width="80" height="80"/>
+  <object id="18" gid="11" x="800" y="480" width="80" height="80"/>
+  <object id="19" gid="11" x="880" y="400" width="80" height="80"/>
+  <object id="20" gid="11" x="880" y="960" width="80" height="80"/>
+  <object id="21" gid="11" x="800" y="960" width="80" height="80"/>
+  <object id="22" gid="2" x="480" y="960" width="80" height="80"/>
+  <object id="23" gid="2" x="480" y="800" width="80" height="80"/>
+ </objectgroup>
+</map>

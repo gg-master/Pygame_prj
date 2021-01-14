@@ -191,7 +191,6 @@ class Player(pygame.sprite.Sprite):
                         self.rect = self.rect.move(-tile_width, 0)
 
 
-
 def choose_level():
     try:
         c = input('Введите название карты уровня: ')
