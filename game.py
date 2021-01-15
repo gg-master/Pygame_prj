@@ -3,6 +3,7 @@ import pygame
 from os import path
 import os
 import sys
+from settings import *
 
 MAPDIR = 'data\\maps\\'
 WORLDIMG_DIR = 'world\\'
@@ -75,18 +76,19 @@ def load_image(name, colorkey=None):
 
 class Player(pygame.sprite.Sprite):
     images = {
-        '0_t0': 't_y.png', '0_l0': 't_y_l.png', '0_r0': 't_y_r.png',
-        '0_b0': 't_y_b.png',
-        '0_t1': 't_y1.png', '0_l1': 't_y1_l.png', '0_r1': 't_y1_r.png',
-        '0_b1': 't_y1_b.png',
-        '1_t0': 't_g.png', '1_l0': 't_g_l.png', '1_r0': 't_g_r.png',
-        '1_b0': 't_g_b.png',
-        '1_t1': 't_g1.png', '1_l1': 't_g1_l.png', '1_r1': 't_g1_r.png',
-        '1_b1': 't_g1_b.png',
+        '1_t0': 't_y.png', '1_l0': 't_y_l.png', '1_r0': 't_y_r.png',
+        '1_b0': 't_y_b.png',
+        '1_t1': 't_y1.png', '1_l1': 't_y1_l.png', '1_r1': 't_y1_r.png',
+        '1_b1': 't_y1_b.png',
+        '2_t0': 't_g.png', '2_l0': 't_g_l.png', '2_r0': 't_g_r.png',
+        '2_b0': 't_g_b.png',
+        '2_t1': 't_g1.png', '2_l1': 't_g1_l.png', '2_r1': 't_g1_r.png',
+        '2_b1': 't_g1_b.png',
     }
 
-    def __init__(self, x, y, layer, tile_size, player):
+    def __init__(self, game, x, y, layer, tile_size, player):
         super().__init__()
+        self.game = game
         self.type_tanks = 't1'
         self.player = player
         self.side = 't'
@@ -116,7 +118,7 @@ class Player(pygame.sprite.Sprite):
         self.move_trigger = not self.move_trigger
         image = load_image(f'{DIR_FOR_TANKS_IMG}{self.type_tanks}\\'
                            f'{self.images[f"{self.player}_{self.side}{int(self.move_trigger)}"]}'
-                           if self.player == 0 else
+                           if self.player == 1 else
                            f'{DIR_FOR_TANKS_IMG}{self.type_tanks}\\'
                            f'{self.images[f"{self.player}_{self.side}{int(self.move_trigger)}"]}')
         self.image = pygame.transform.scale(image, (self.TILE_SIZE -
@@ -134,8 +136,8 @@ class Player(pygame.sprite.Sprite):
         self.hide_timer = pygame.time.get_ticks()
         self.rect.center = (WIDTH / 2, HEIGHT + 200)
 
-    def move(self, keystate, walls):
-        if keystate[pygame.K_UP]:
+    def move(self, keystate, walls, obj):
+        if keystate[obj['up']]:
             self.side = 't'
             self.load_tanks_image()
             self.rect = self.rect.move(0, -self.speed)
@@ -143,7 +145,7 @@ class Player(pygame.sprite.Sprite):
                                             pygame.sprite.collide_mask)
             if c:
                 self.rect = self.rect.move(0, self.speed)
-        elif keystate[pygame.K_DOWN]:
+        elif keystate[obj['down']]:
             self.side = 'b'
             self.load_tanks_image()
             self.rect = self.rect.move(0, self.speed)
@@ -151,7 +153,7 @@ class Player(pygame.sprite.Sprite):
                                             pygame.sprite.collide_mask)
             if c:
                 self.rect = self.rect.move(0, -self.speed)
-        elif keystate[pygame.K_LEFT]:
+        elif keystate[obj['left']]:
             self.side = 'l'
             self.load_tanks_image()
             self.rect = self.rect.move(-self.speed, 0)
@@ -159,8 +161,7 @@ class Player(pygame.sprite.Sprite):
                                             pygame.sprite.collide_mask)
             if c:
                 self.rect = self.rect.move(self.speed, 0)
-
-        elif keystate[pygame.K_RIGHT]:
+        elif keystate[obj['right']]:
             self.side = 'r'
             self.load_tanks_image()
             self.rect = self.rect.move(self.speed, 0)
@@ -175,9 +176,13 @@ class Player(pygame.sprite.Sprite):
             self.rect.centerx = WIDTH / 2
             self.rect.bottom = HEIGHT - 10
         keystate = pygame.key.get_pressed()
-        self.move(keystate, walls)
+        if self.player == 1:
+            obj = PLAYER1
+        else:
+            obj = PLAYER2
 
-        if keystate[pygame.K_SPACE]:
+        self.move(keystate, walls, obj)
+        if keystate[obj['shoot']]:
             self.shoot()
 
     def shoot(self):
@@ -185,8 +190,8 @@ class Player(pygame.sprite.Sprite):
         if now - self.last_shot > self.shoot_delay:
             self.last_shot = now
             if self.bullet is None or not self.bullet.alive():
-                bullet = Bullet(self.rect, self.side)
-                bullet.add(game.all_sprites, game.bullets)
+                bullet = Bullet(self.rect, self.side, self.game)
+                bullet.add(self.game.all_sprites, self.game.bullets)
                 self.bullet = bullet
 
 
@@ -198,10 +203,15 @@ class Bullet(pygame.sprite.Sprite):
         'b': 'b_b.png'
     }
 
-    def __init__(self, rect_tank, side: str):
+    def __init__(self, rect_tank, side: str, game):
         super().__init__()
+        self.game = game
         self.image = load_image(f'{DIR_FOR_TANKS_IMG}'
                                 f'bullet\\{self.images[side]}')
+        k = (rect_tank.width // 4) // self.image.get_rect().width
+        self.image = pygame.transform.scale(self.image,
+                                            (self.image.get_rect().width * k,
+                                             self.image.get_rect().height * k))
         self.mask = pygame.mask.from_surface(self.image)
         self.rect = self.image.get_rect()
         self.side = side
@@ -212,19 +222,25 @@ class Bullet(pygame.sprite.Sprite):
     def update(self):
         self.rect = self.rect.move(self.speedx, self.speedy)
         # удалить спрайт, если он заходит за верхнюю часть экрана
-        if self.rect.y < game.map.rect.y \
-                or self.rect.x < game.map.rect.x \
-                or self.rect.x > game.map.rect.right \
-                or self.rect.y > game.map.rect.bottom:
+        if self.rect.y < self.game.map.rect.y \
+                or self.rect.x < self.game.map.rect.x \
+                or self.rect.x > self.game.map.rect.right \
+                or self.rect.y > self.game.map.rect.bottom:
             self.kill()
-        # TODO столкновне с другими пулями, игроками, стенами.
-        c = pygame.sprite.spritecollideany(self, game.all_sprites)
+        # TODO столкновне с другими пулями, игроками
+        c = pygame.sprite.spritecollideany(self, self.game.all_sprites)
         if c is not None:
-            if c in game.wall_group and c.isWall:
+            if c in self.game.wall_group and c.isWall:
                 coord_collide = pygame.sprite.collide_mask(c, self)
                 if coord_collide is not None:
-                    c.change_yourself(coord_collide)
+                    if c.isBroken:
+                        c.change_yourself(coord_collide)
                     self.kill()
+            if c in self.game.player_group:
+                self.kill()
+            if c in self.game.bullets and c is not self:
+                self.kill()
+                c.kill()
 
     def set_rect(self, rect_tank):
         if self.side == 't':
@@ -314,15 +330,15 @@ class Wall(pygame.sprite.Sprite):
         self.isWall = True if id not in [2] else False
 
         self.tile_size = tile_size
-        self.id = id
-        self.image = self.mask = None
-        self.reload_mask()
+        self.image = self.mask = self.id = None
+        self.reload_mask(id)
         self.rect = self.image.get_rect()
 
         self.rect.x = x
         self.rect.y = y
 
-    def reload_mask(self):
+    def reload_mask(self, set_id):
+        self.id = set_id
         self.image = load_image(f'{WORLDIMG_DIR}{self.type_wall[self.id]}')
         self.image = pygame.transform.scale(self.image,
                                             (self.tile_size, self.tile_size))
@@ -330,101 +346,120 @@ class Wall(pygame.sprite.Sprite):
 
     def change_yourself(self, coords):
         x, y = coords
+        max_s = self.tile_size              # 50
+        half_s = max_s // 2 - max_s // 10 - 2  # 20
+        half_s2 = half_s + max_s // 5 + 4      # 30
         if self.id == 11:
-            if 0 <= x <= 25 and 0 <= y <= 25:
-                self.id = 5
-                self.reload_mask()
-            elif 50 >= x >= 25 >= y >= 0:
-                self.id = 3
-                self.reload_mask()
-            elif 0 <= x <= 25 <= y <= 50:
-                self.id = 6
-                self.reload_mask()
-            elif 50 >= x >= 25 and 25 <= y <= 50:
-                self.id = 4
-                self.reload_mask()
+            if half_s <= x <= half_s2:
+                if 0 <= y <= half_s:
+                    self.reload_mask(7)
+                elif half_s2 <= y <= max_s:
+                    self.reload_mask(10)
+            elif 0 <= x <= half_s:
+                if half_s <= y <= half_s2:
+                    self.reload_mask(9)
+                elif 0 <= y <= half_s:
+                    self.reload_mask(5)
+                elif half_s2 <= y <= max_s:
+                    self.reload_mask(6)
+            elif half_s2 <= x <= max_s:
+                if half_s <= y <= half_s2:
+                    self.reload_mask(8)
+                elif 0 <= y <= half_s:
+                    self.reload_mask(3)
+                elif half_s2 <= y <= max_s:
+                    self.reload_mask(4)
         elif self.id == 5:
-            if x >= 25 >= y >= 0:
-                self.id = 7
-                self.reload_mask()
-            elif 25 <= x <= 50 and 25 <= y <= 50:
-                self.id = 22
-                self.reload_mask()
-            elif 0 <= x <= 25 <= y <= 50:
-                self.id = 9
-                self.reload_mask()
+            if half_s <= x <= half_s2:
+                if half_s2 <= y <= max_s:
+                    self.reload_mask(19)
+            if max_s // 2 <= x <= max_s:
+                if half_s <= y <= half_s2:
+                    self.reload_mask(18)
+                elif 0 <= y <= half_s:
+                    self.reload_mask(7)
+                elif half_s2 <= y <= max_s:
+                    self.reload_mask(22)
+            if 0 <= x <= max_s // 2 <= y <= max_s:
+                self.reload_mask(9)
         elif self.id == 3:
-            if 0 <= x <= 25 and 0 <= y <= 25:
-                self.id = 7
-                self.reload_mask()
-            elif 0 <= x <= 25 <= y <= 50:
-                self.id = 23
-                self.reload_mask()
-            elif 25 <= x <= 50 and 25 <= y <= 50:
-                self.id = 8
-                self.reload_mask()
+            if half_s <= x <= half_s2 <= y <= max_s:
+                self.reload_mask(21)
+            if 0 <= x <= max_s // 2:
+                if half_s <= y <= half_s2:
+                    self.reload_mask(20)
+                if 0 <= y <= half_s:
+                    self.reload_mask(7)
+                if half_s2 <= y <= max_s:
+                    self.reload_mask(23)
+            if max_s // 2 <= x <= max_s and max_s // 2 <= y <= max_s:
+                self.reload_mask(8)
         elif self.id == 6:
-            if 0 <= x <= 25 and 0 <= y <= 25:
-                self.id = 9
-                self.reload_mask()
-            elif 50 >= x >= 25 >= y >= 0:
-                self.id = 23
-                self.reload_mask()
-            elif 25 <= x <= 50 and 25 <= y <= 50:
-                self.id = 10
-                self.reload_mask()
+            if half_s2 >= x >= half_s >= y >= 0:
+                self.reload_mask(20)
+            if half_s2 <= x <= max_s:
+                if half_s <= y <= half_s2:
+                    self.reload_mask(21)
+                elif 0 <= y <= half_s:
+                    self.reload_mask(23)
+            if 0 <= x <= half_s and 0 <= y <= max_s // 2:
+                self.reload_mask(9)
+            if max_s // 2 <= x <= max_s and max_s // 2 <= y <= max_s:
+                self.reload_mask(10)
         elif self.id == 4:
-            if 0 <= x <= 25 and 0 <= y <= 25:
-                self.id = 22
-                self.reload_mask()
-            elif 50 >= x >= 25 >= y >= 0:
-                self.id = 8
-                self.reload_mask()
-            elif 0 <= x <= 25 <= y <= 50:
-                self.id = 10
-                self.reload_mask()
+            if half_s2 >= x >= half_s >= y >= 0:
+                self.reload_mask(18)
+            if 0 <= x <= max_s // 2 <= y <= max_s:
+                self.reload_mask(10)
+            if 0 <= x <= half_s:
+                if half_s <= y <= max_s // 2:
+                    self.reload_mask(19)
+                elif 0 <= y <= half_s:
+                    self.reload_mask(22)
+            if max_s >= x >= max_s // 2 >= y >= 0:
+                self.reload_mask(8)
         elif self.id == 10:
-            if 0 <= x <= 25 and 0 <= y <= 25:
-                self.id = 19
-                self.reload_mask()
-            if 50 >= x >= 25 >= y >= 0:
-                self.id = 21
-                self.reload_mask()
+            if 0 <= y <= max_s // 2:
+                if half_s <= x <= half_s2:
+                    self.kill()
+                elif 0 <= x <= half_s:
+                    self.reload_mask(19)
+                elif half_s2 <= x <= max_s:
+                    self.reload_mask(21)
         elif self.id == 7:
-            if 0 <= x <= 25 <= y <= 50:
-                self.id = 20
-                self.reload_mask()
-            if 50 >= x >= 25 and 25 <= y <= 50:
-                self.id = 18
-                self.reload_mask()
+            if max_s // 2 <= y <= max_s:
+                if half_s <= x <= half_s2:
+                    self.kill()
+                elif 0 <= x <= half_s:
+                    self.reload_mask(20)
+                elif half_s2 <= x <= max_s:
+                    self.reload_mask(18)
         elif self.id == 9:
-            if 50 >= x >= 25 >= y >= 0:
-                self.id = 20
-                self.reload_mask()
-            if 50 >= x >= 25 and 25 <= y <= 50:
-                self.id = 19
-                self.reload_mask()
+            if max_s // 2 <= x <= max_s:
+                if half_s <= y <= half_s2:
+                    self.kill()
+                elif 0 <= y <= half_s:
+                    self.reload_mask(20)
+                elif half_s2 <= y <= max_s:
+                    self.reload_mask(19)
         elif self.id == 8:
-            if 0 <= x <= 25 and 0 <= y <= 25:
-                self.id = 18
-                self.reload_mask()
-            if 0 <= x <= 25 <= y <= 50:
-                self.id = 21
-                self.reload_mask()
+            if 0 <= x <= max_s // 2:
+                if half_s <= y <= half_s2:
+                    self.kill()
+                elif 0 <= y <= half_s:
+                    self.reload_mask(18)
+                elif half_s2 <= y <= max_s:
+                    self.reload_mask(21)
         elif self.id == 22:
             if 50 >= x >= 25 >= y >= 0:
-                self.id = 18
-                self.reload_mask()
+                self.reload_mask(18)
             if 0 <= x <= 25 <= y <= 50:
-                self.id = 19
-                self.reload_mask()
+                self.reload_mask(19)
         elif self.id == 23:
             if 50 >= x >= 25 and 25 <= y <= 50:
-                self.id = 21
-                self.reload_mask()
+                self.reload_mask(21)
             if 0 <= x <= 25 and 0 <= y <= 25:
-                self.id = 20
-                self.reload_mask()
+                self.reload_mask(20)
         else:
             self.kill()
 
@@ -452,12 +487,12 @@ class Game:
         # print(self.TILES_FOR_PLAYERS)
         self.player1 = None
         self.player2 = None
-        if type_game == 1:
-            self.player1 = Player(*self.TILES_FOR_PLAYERS[0],
-                                  self.TILE_SIZE, player=0)
+        if type_game == 1 or type_game == 2:
+            self.player1 = Player(self, *self.TILES_FOR_PLAYERS[0],
+                                  self.TILE_SIZE, player=1)
             if type_game == 2:
-                self.player2 = Player(*self.TILES_FOR_PLAYERS[1],
-                                      self.TILE_SIZE, player=1)
+                self.player2 = Player(self, *self.TILES_FOR_PLAYERS[1],
+                                      self.TILE_SIZE, player=2)
         elif type_game == 3:
             raise Exception('Онлайн еще не готов')
         else:
@@ -502,7 +537,7 @@ fullscreen = False
 if __name__ == '__main__':
     clock = pygame.time.Clock()
     running = True
-    game = Game(1, 1)
+    game = Game(2, 1)
     while running:
         screen.fill(pygame.Color('black'))
         for event in pygame.event.get():

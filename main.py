@@ -206,7 +206,7 @@ def start_screen():
     clock = pygame.time.Clock()
     manager = pygame_gui.ui_manager.UIManager((WIDTH, HEIGHT))
 
-    fon = pygame.transform.scale(load_image('fon3.png'), (WIDTH, HEIGHT))
+    fon = pygame.transform.scale(load_image('fon\\fon3.png'), (WIDTH, HEIGHT))
 
     # Создаем несколько поверхностей, для отрисовки чуть
     # более темного фона и основных кнопок
@@ -332,21 +332,23 @@ def main():
     # Далее выбираем уровень игры. Далее запускаем игровой цикл,
     # в зависимости от выбранного типа игры
     type_game, level, select_screen = start_screen()
+    import game
     # После получения типа игры и уровня,
     # мы должны в течении нескольких секунд
     # показывать экран с выбором уровня и проигрывать музыку
     # TODO делать счетчик на "зависание" экрана
     #  с выбором уровня. Паралельно включив музыку
     print(type_game, level)
+    game = game.Game(int(type_game), int(level))
     while running:
         # screen.fill(pygame.Color('white'))
         screen.blit(background, (0, 0))
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
-
-        screen.blit(select_screen, (0, 0))
-
+            game.update(event)
+        game.render()
+        game.update()
         pygame.display.flip()
         clock.tick(FPS)
     pygame.quit()
