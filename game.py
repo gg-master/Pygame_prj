@@ -5,6 +5,18 @@ import os
 import sys
 from settings import *
 
+"""
+Карта должна содержать минимум эти слои.
+0. ground - layer tiles
+1. spawn_players - layer tiles
+2. spawn_bots - layer tiles
+3. eagle - object
+
+Также могут быть использованы:
+walls - objects
+trees - layer - tiles
+"""
+
 MAPDIR = 'data\\maps\\'
 WORLDIMG_DIR = 'world\\'
 DIR_FOR_TANKS_IMG = 'tanks_texture\\'
@@ -18,7 +30,8 @@ TILE_FOR_MOBS = 17
 
 pygame.init()
 screen = pygame.display.set_mode((WIDTH, HEIGHT), pygame.RESIZABLE)
-monitor_size = [pygame.display.Info().current_w, pygame.display.Info().current_h]
+monitor_size = [pygame.display.Info().current_w,
+                pygame.display.Info().current_h]
 background = pygame.Surface((WIDTH, HEIGHT))
 
 # Загрузка всей игровой графики
@@ -72,6 +85,10 @@ def load_image(name, colorkey=None):
     else:
         image = image.convert_alpha()
     return image
+
+
+def convert_coords(x, tile_size):
+    return x[0] * tile_size + OFFSET, x[1] * tile_size + OFFSET, x[2]
 
 
 class Player(pygame.sprite.Sprite):
@@ -136,41 +153,33 @@ class Player(pygame.sprite.Sprite):
         self.hide_timer = pygame.time.get_ticks()
         self.rect.center = (WIDTH / 2, HEIGHT + 200)
 
-    def move(self, keystate, walls, obj):
-        if keystate[obj['up']]:
-            self.side = 't'
-            self.load_tanks_image()
-            self.rect = self.rect.move(0, -self.speed)
-            c = pygame.sprite.spritecollide(self, walls, False,
-                                            pygame.sprite.collide_mask)
-            if c:
-                self.rect = self.rect.move(0, self.speed)
-        elif keystate[obj['down']]:
-            self.side = 'b'
-            self.load_tanks_image()
-            self.rect = self.rect.move(0, self.speed)
-            c = pygame.sprite.spritecollide(self, walls, False,
-                                            pygame.sprite.collide_mask)
-            if c:
-                self.rect = self.rect.move(0, -self.speed)
-        elif keystate[obj['left']]:
-            self.side = 'l'
-            self.load_tanks_image()
-            self.rect = self.rect.move(-self.speed, 0)
-            c = pygame.sprite.spritecollide(self, walls, False,
-                                            pygame.sprite.collide_mask)
-            if c:
-                self.rect = self.rect.move(self.speed, 0)
-        elif keystate[obj['right']]:
-            self.side = 'r'
-            self.load_tanks_image()
-            self.rect = self.rect.move(self.speed, 0)
-            c = pygame.sprite.spritecollide(self, walls, False,
-                                            pygame.sprite.collide_mask)
-            if c:
-                self.rect = self.rect.move(-self.speed, 0)
+    def move_collide(self, side: str, speed=(0, 0)):
+        self.side = side
+        self.load_tanks_image()
+        self.rect = self.rect.move(speed[0], speed[1])
+        c = pygame.sprite.spritecollide(self, self.game.wall_group, False,
+                                        pygame.sprite.collide_mask)
+        c1 = pygame.sprite.spritecollide(self, self.game.all_sprites, False,
+                                         pygame.sprite.collide_mask)
+        # TODO обработка столкновений с другими игроками и тд
+        """За обработку столкновений с пулями отвечает сама пуля"""
+        if len(c1) != 1:
+            print(c1)
+        if c:
+            self.rect = self.rect.move(-speed[0], -speed[1])
 
-    def update(self, walls):
+    def move(self, keystate, obj):
+        # print(obj['up'])
+        if keystate[pygame.key.key_code(obj['up'])]:
+            self.move_collide('t', (0, -self.speed))
+        elif keystate[pygame.key.key_code(obj['down'])]:
+            self.move_collide('b', (0, self.speed))
+        elif keystate[pygame.key.key_code(obj['left'])]:
+            self.move_collide('l', (-self.speed, 0))
+        elif keystate[pygame.key.key_code(obj['right'])]:
+            self.move_collide('r', (self.speed, 0))
+
+    def update(self, *args):
         if self.hidden and pygame.time.get_ticks() - self.hide_timer > 1000:
             self.hidden = False
             self.rect.centerx = WIDTH / 2
@@ -181,8 +190,8 @@ class Player(pygame.sprite.Sprite):
         else:
             obj = PLAYER2
 
-        self.move(keystate, walls, obj)
-        if keystate[obj['shoot']]:
+        self.move(keystate, obj)
+        if keystate[pygame.key.key_code(obj['shoot'])]:
             self.shoot()
 
     def shoot(self):
@@ -190,7 +199,8 @@ class Player(pygame.sprite.Sprite):
         if now - self.last_shot > self.shoot_delay:
             self.last_shot = now
             if self.bullet is None or not self.bullet.alive():
-                bullet = Bullet(self.rect, self.side, self.game)
+                bullet = Bullet(self.rect, self.side, self.game,
+                                fromPlayer=True)
                 bullet.add(self.game.all_sprites, self.game.bullets)
                 self.bullet = bullet
 
@@ -203,8 +213,9 @@ class Bullet(pygame.sprite.Sprite):
         'b': 'b_b.png'
     }
 
-    def __init__(self, rect_tank, side: str, game):
+    def __init__(self, rect_tank, side: str, game, fromPlayer=False):
         super().__init__()
+        self.fromPlayer = fromPlayer
         self.game = game
         self.image = load_image(f'{DIR_FOR_TANKS_IMG}'
                                 f'bullet\\{self.images[side]}')
@@ -237,10 +248,14 @@ class Bullet(pygame.sprite.Sprite):
                         c.change_yourself(coord_collide)
                     self.kill()
             if c in self.game.player_group:
+                # TODO сделать уменьшение жизни у игрока и анимацию попадания
                 self.kill()
             if c in self.game.bullets and c is not self:
                 self.kill()
                 c.kill()
+            if c in self.game.mobs_group and self.fromPlayer:
+                c.kill()
+                self.kill()
 
     def set_rect(self, rect_tank):
         if self.side == 't':
@@ -259,48 +274,6 @@ class Bullet(pygame.sprite.Sprite):
             self.rect.top = rect_tank.bottom
             self.rect.centerx = rect_tank.centerx
             self.speedy = self.speed
-
-
-def convert_coords(x, tile_size):
-    return x[0] * tile_size + OFFSET, x[1] * tile_size + OFFSET, x[2]
-
-
-class Map:
-    def __init__(self, path, map_size):
-        self.map = pytmx.load_pygame(path)
-        self.TILE_SIZE = map_size // self.map.width
-        self.width = self.map.width
-        self.height = self.map.height
-        self.koeff = self.map.tilewidth / self.TILE_SIZE
-        self.rect = pygame.rect.Rect((OFFSET, OFFSET),
-                                     (MAP_SIZE, MAP_SIZE))
-
-    def get_tile_image(self, x, y, layer):
-        image = self.map.get_tile_image(x, y, layer)
-        if image is not None:
-            image = pygame.transform.scale(image,
-                                           (self.TILE_SIZE, self.TILE_SIZE))
-            return image
-
-    def get_objects(self, name):
-        return self.map.layernames[name]
-
-    def get_tile_id(self, gid):
-        return self.map.tiledgidmap[gid]
-
-    def get_tiled_by_id(self, id):
-        return list(map(lambda x: convert_coords(x, self.TILE_SIZE),
-                        self.map.get_tile_locations_by_gid(
-            list(self.map.tiledgidmap.values()).index(id) + 1)))
-
-    def render_layer(self, screen, layer):
-        for x in range(self.width):
-            for y in range(self.height):
-                image = self.get_tile_image(x, y, layer)
-                if image is not None:
-                    screen.blit(image, (
-                        x * self.TILE_SIZE + OFFSET,
-                        y * self.TILE_SIZE + OFFSET))
 
 
 class Wall(pygame.sprite.Sprite):
@@ -464,11 +437,198 @@ class Wall(pygame.sprite.Sprite):
             self.kill()
 
 
+class Bot(pygame.sprite.Sprite):
+    images = {
+        't0': 't_w.png',
+        'l0': 't_w_l.png',
+        'r0': 't_w_r.png',
+        'b0': 't_w_b.png',
+        't1': 't_w1.png',
+        'l1': 't_w1_l.png',
+        'r1': 't_w1_r.png',
+        'b1': 't_w1_b.png'
+    }
+
+    def __init__(self, game, x, y, layer, tile_size, type_bot: str):
+        super().__init__()
+        self.game = game
+        self.type_tanks = type_bot
+        self.side = 't'
+        self.move_trigger = False
+
+        self.TILE_SIZE = tile_size
+        self.image = None
+        self.mask = None
+        self.load_tanks_image()
+
+        self.coords = [x, y]
+        self.rect = self.image.get_rect()
+        self.rect.x = self.coords[0]
+        self.rect.y = self.coords[1]
+
+        self.layer = layer
+        self.speed = 2
+        self.lives = 3
+        self.hidden = False
+        self.hide_timer = pygame.time.get_ticks()
+        self.bullet = None
+
+        self.shoot_delay = 200
+        self.last_shot = pygame.time.get_ticks()
+
+    def load_tanks_image(self):
+        self.move_trigger = not self.move_trigger
+        image = load_image(f'{DIR_FOR_TANKS_IMG}{self.type_tanks}\\'
+                           f'{self.images[f"{self.side}{int(self.move_trigger)}"]}')
+        self.image = pygame.transform.scale(image, (self.TILE_SIZE -
+                                                    self.TILE_SIZE // 8,
+                                                    self.TILE_SIZE -
+                                                    self.TILE_SIZE // 8))
+        s = pygame.Surface((self.image.get_rect().width,
+                            self.image.get_rect().height), pygame.SRCALPHA)
+        s.fill(pygame.color.Color('black'))
+        self.mask = pygame.mask.from_surface(s)
+
+    def hide(self):
+        # временно скрыть игрока
+        self.hidden = True
+        self.hide_timer = pygame.time.get_ticks()
+        self.rect.center = (WIDTH / 2, HEIGHT + 200)
+
+    def move_collide(self, side: str, speed=(0, 0)):
+        self.side = side
+        self.load_tanks_image()
+        self.rect = self.rect.move(speed[0], speed[1])
+        c = pygame.sprite.spritecollide(self, self.game.wall_group, False,
+                                        pygame.sprite.collide_mask)
+        c1 = pygame.sprite.spritecollide(self, self.game.all_sprites, False,
+                                         pygame.sprite.collide_mask)
+        # TODO обработка столкновений с другими игроками и тд
+        """За обработку столкновений с пулями отвечает сама пуля"""
+        if len(c1) != 1:
+            print(c1)
+        if c:
+            self.rect = self.rect.move(-speed[0], -speed[1])
+
+    def move(self, keystate, walls, obj):
+        pass
+
+    def update(self, walls):
+        pass
+
+    def shoot(self):
+        now = pygame.time.get_ticks()
+        if now - self.last_shot > self.shoot_delay:
+            self.last_shot = now
+            if self.bullet is None or not self.bullet.alive():
+                bullet = Bullet(self.rect, self.side, self.game)
+                bullet.add(self.game.all_sprites, self.game.bullets)
+                self.bullet = bullet
+
+    def kill(self):
+        # self.game.bot_manager.new_bot()
+
+        super().kill()
+
+
+class BotManager:
+    def __init__(self, game):
+        self.game = game
+        self.player_count = 1 if self.game.player1 is not None \
+            else 2 if self.game.player2 is not None else 0
+        if self.player_count == 0:
+            raise Exception('Недостаточно игроков')
+
+        self.start_time = pygame.time.get_ticks()
+
+        self.spawn_time = 190 - game.level * 4 - (
+                self.player_count - 1) * 60
+        self.respawn_time = (190 - game.level * 4 - (
+                self.player_count - 1) * 20) * 20
+        self.first_period = self.respawn_time // 8
+        self.second_period = self.first_period
+        self.third_period = 256
+
+        self.count_bots = 20
+        self.visible_bots = 4 if self.player_count == 1 else 6
+        self.free_tiles_for_spawn = self.game.TILES_FOR_MOBS
+        self.not_free_tiles = []
+
+        bot = Bot(self.game, *self.get_tile(), self.game.TILE_SIZE, 't2')
+        bot.add(self.game.mobs_group, self.game.all_sprites)
+
+    def update(self):
+        now = pygame.time.get_ticks()
+        if now - self.start_time > self.respawn_time and \
+                len(self.game.mobs_group) <= 4:
+            bot = Bot(self.game, *self.get_tile(), self.game.TILE_SIZE, 't1')
+            bot.add(self.game.mobs_group, self.game.all_sprites)
+
+            self.start_time = now
+
+    def get_tile(self):
+        from random import choice
+        return choice(self.free_tiles_for_spawn)
+
+
+class Map:
+    def __init__(self, path, map_size):
+        self.map = pytmx.load_pygame(path)
+        self.TILE_SIZE = map_size // self.map.width
+        self.width = self.map.width
+        self.height = self.map.height
+        self.koeff = self.map.tilewidth / self.TILE_SIZE
+        self.rect = pygame.rect.Rect((OFFSET, OFFSET),
+                                     (MAP_SIZE, MAP_SIZE))
+        self.layers = list(self.map.layernames.keys())
+        self.checking_layers()
+
+    def checking_layers(self):
+        for i in ['ground', 'spawn_players', 'spawn_bots', 'eagle']:
+            if not self.check_(i):
+                raise Exception(f'В карте не обнаружены необходимые слои: {i}')
+
+    def get_tile_image(self, x, y, layer):
+        image = self.map.get_tile_image(x, y, layer)
+        if image is not None:
+            image = pygame.transform.scale(image,
+                                           (self.TILE_SIZE, self.TILE_SIZE))
+            return image
+
+    def get_objects(self, name):
+        return self.map.layernames[name]
+
+    def get_tile_id(self, gid):
+        return self.map.tiledgidmap[gid]
+
+    def get_tiled_by_id(self, id):
+        return list(map(lambda x: convert_coords(x, self.TILE_SIZE),
+                        self.map.get_tile_locations_by_gid(
+            list(self.map.tiledgidmap.values()).index(id) + 1)))
+
+    def render_layer(self, screen, layer_name):
+        if layer_name not in self.layers:
+            return
+        layer = self.layers.index(layer_name)
+        for x in range(self.width):
+            for y in range(self.height):
+                image = self.get_tile_image(x, y, layer)
+                if image is not None:
+                    screen.blit(image, (
+                        x * self.TILE_SIZE + OFFSET,
+                        y * self.TILE_SIZE + OFFSET))
+
+    def check_(self, name):
+        return name in self.map.layernames
+
+
 class Game:
     def __init__(self, type_game, number_level):
         self.map = Map(f'{MAPDIR}map{number_level}.tmx', MAP_SIZE)
         self.map_object = self.map.map
         self.TILE_SIZE = self.map.TILE_SIZE
+        self.type_game = type_game
+        self.level = number_level
 
         self.all_sprites = pygame.sprite.Group()
         self.mobs_group = pygame.sprite.Group()
@@ -485,6 +645,7 @@ class Game:
         self.TILES_FOR_PLAYERS = self.map.get_tiled_by_id(TILE_FOR_PLAYERS)
         self.TILES_FOR_MOBS = self.map.get_tiled_by_id(TILE_FOR_MOBS)
         # print(self.TILES_FOR_PLAYERS)
+
         self.player1 = None
         self.player2 = None
         if type_game == 1 or type_game == 2:
@@ -502,33 +663,38 @@ class Game:
         if self.player2 is not None:
             self.player2.add(self.player_group, self.all_sprites)
 
+        self.bot_manager = BotManager(self)
+
     def createWalls(self):
+        if not self.map.check_('walls'):
+            return
         for i in self.map.get_objects('walls'):
             x, y = i.x / self.map.koeff + OFFSET, i.y / self.map.koeff + OFFSET
             wall = Wall(x, y, self.map.get_tile_id(i.gid), self.TILE_SIZE)
             wall.add(self.all_sprites, self.wall_group)
 
     def update(self, events=None):
-        self.player_group.update(self.wall_group)
+        self.player_group.update()
         self.bullets.update()
 
     def render(self):
         # Отрисовка по слоям.
         """
-        Карта должна содержать минимум 4 слоя тайлов.
-        0. Земля
-        1. места для спавна игрков
-        2. места для спавна ботов
-        3. Деревья
+        Карта может содержать подобные слои.
+        0. ground
+        1. spawn_players
+        2. spawn_bots
+        3. trees
+        4. eagle
+        5. walls
         """
-        # Отрисовка первого слоя (основного)
-        self.map.render_layer(screen, 0)
+        # Отрисовка земли
+        self.map.render_layer(screen, 'ground')
         # render player and bullet and mobs
-
-        self.wall_group.draw(screen)
         self.all_sprites.draw(screen)
-        # Отрисовка второго слоя (деревья и тп)
-        self.map.render_layer(screen, 3)
+        self.bot_manager.update()
+        # Отрисовка деревьев
+        self.map.render_layer(screen, 'trees')
 
 
 fullscreen = False
@@ -548,6 +714,7 @@ if __name__ == '__main__':
                     screen = pygame.display.set_mode((event.w, event.h),
                                                      pygame.RESIZABLE)
             if event.type == pygame.KEYDOWN:
+                # print(pygame.key.name(event.key))
                 if event.key == pygame.K_f:
                     fullscreen = not fullscreen
                     if fullscreen:

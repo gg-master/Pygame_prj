@@ -1,22 +1,22 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <map version="1.4" tiledversion="1.4.3" orientation="orthogonal" renderorder="right-down" width="13" height="13" tilewidth="80" tileheight="80" infinite="0" nextlayerid="13" nextobjectid="214">
  <tileset firstgid="1" source="tileds.tsx"/>
- <layer id="1" name="земля" width="13" height="13">
+ <layer id="1" name="ground" width="13" height="13">
   <data encoding="base64" compression="zlib">
    eJxjZGBgYBzFo3gQYwDjGACq
   </data>
  </layer>
- <layer id="11" name="спавн_игрков" width="13" height="13">
+ <layer id="11" name="spawn_players" width="13" height="13">
   <data encoding="base64" compression="zlib">
    eJxjYBgFo2DggAABPggAAAYkACE=
   </data>
  </layer>
- <layer id="12" name="спавн_ботов" width="13" height="13">
+ <layer id="12" name="spawn_bots" width="13" height="13">
   <data encoding="base64" compression="zlib">
    eJwTZGBgEIRifECQSHWjYBRQGwAABnsAZw==
   </data>
  </layer>
- <layer id="2" name="деревья" width="13" height="13">
+ <layer id="2" name="trees" width="13" height="13">
   <data encoding="base64" compression="zlib">
    eJxjYBgFgx3wIGFi5XGpxaZ3sAMAVkQAYQ==
   </data>

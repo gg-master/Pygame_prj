@@ -1,14 +1,14 @@
 PLAYER1 = {
-    'up': 119,
-    'down': 115,
-    'left': 97,
-    'right': 100,
-    'shoot': 304
+    'up': 'w',
+    'down': 's',
+    'left': 'a',
+    'right': 'd',
+    'shoot': 'left shift'
 }
 PLAYER2 = {
-    'up': 273,
-    'down': 274,
-    'left': 276,
-    'right': 275,
-    'shoot': 305
+    'up': "up",
+    'down': 'down',
+    'left': 'left',
+    'right': 'right',
+    'shoot': 'right ctrl'
 }
