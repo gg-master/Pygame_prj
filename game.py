@@ -256,6 +256,9 @@ class Bullet(pygame.sprite.Sprite):
             if c in self.game.mobs_group and self.fromPlayer:
                 c.kill()
                 self.kill()
+            if c == self.game.eagle:
+                c.eagle_break()
+                self.kill()
 
     def set_rect(self, rect_tank):
         if self.side == 't':
@@ -622,6 +625,34 @@ class Map:
         return name in self.map.layernames
 
 
+class Eagle(pygame.sprite.Sprite):
+    images = {
+        'normal': 'eagle.png',
+        'broken': 'eagle_broken.png'
+    }
+
+    def __init__(self, game, x, y, tile_size):
+        super().__init__(game.all_sprites)
+        self.TILE_SIZE = tile_size
+        self.image = load_image(f'{WORLDIMG_DIR}{self.images["normal"]}')
+        self.image = pygame.transform.scale(self.image, (self.TILE_SIZE,
+                                                         self.TILE_SIZE))
+        self.rect = self.image.get_rect()
+        self.mask = pygame.mask.from_surface(self.image)
+
+        self.rect.x = x
+        self.rect.y = y
+        self.game = game
+        self.isBroken = False
+
+    def eagle_break(self):
+        self.image = load_image(f'{WORLDIMG_DIR}\\{self.images["broken"]}')
+        self.image = pygame.transform.scale(self.image, (self.TILE_SIZE,
+                                                         self.TILE_SIZE))
+        self.mask = pygame.mask.from_surface(self.image)
+        self.isBroken = True
+
+
 class Game:
     def __init__(self, type_game, number_level):
         self.map = Map(f'{MAPDIR}map{number_level}.tmx', MAP_SIZE)
@@ -635,6 +666,7 @@ class Game:
         self.player_group = pygame.sprite.Group()
         self.wall_group = pygame.sprite.Group()
         self.bullets = pygame.sprite.Group()
+        self.eagle = self.createEagle()
 
         # Создаем спрайты стен
         self.createWalls()
@@ -673,7 +705,14 @@ class Game:
             wall = Wall(x, y, self.map.get_tile_id(i.gid), self.TILE_SIZE)
             wall.add(self.all_sprites, self.wall_group)
 
+    def createEagle(self):
+        tile = self.map.get_objects('eagle')[0]
+        x, y = tile.x / self.map.koeff + OFFSET, tile.y / self.map.koeff + OFFSET
+        return Eagle(self, x, y, self.TILE_SIZE)
+
     def update(self, events=None):
+        if self.eagle.isBroken:
+            self.game_over()
         self.player_group.update()
         self.bullets.update()
 
@@ -695,6 +734,10 @@ class Game:
         self.bot_manager.update()
         # Отрисовка деревьев
         self.map.render_layer(screen, 'trees')
+
+    def game_over(self):
+        print('game_over')
+        # quit()
 
 
 fullscreen = False
