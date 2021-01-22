@@ -203,6 +203,12 @@ class Player(pygame.sprite.Sprite):
                 bullet.add(self.game.all_sprites, self.game.bullets)
                 self.bullet = bullet
 
+    def compare_rect_with_bot(self, rect: pygame.rect.Rect):
+        if rect.x <= self.rect.x <= rect.x + rect.width\
+                or rect.y <= self.rect.y <= rect.y + rect.width:
+            return True
+        return False
+
 
 class Bullet(pygame.sprite.Sprite):
     images = {
@@ -437,6 +443,10 @@ class Wall(pygame.sprite.Sprite):
         else:
             self.kill()
 
+class EmptyBot(pygame.sprite.Sprite):
+    def __init__(self, x, y, w, h):
+        super().__init__()
+        self.rect = pygame.Rect(x, y, w, h)
 
 class Bot(pygame.sprite.Sprite):
     images = {
@@ -479,9 +489,12 @@ class Bot(pygame.sprite.Sprite):
         self.shoot_delay = 200
         self.last_shot = pygame.time.get_ticks()
 
-        self.target = None
         self.start_time = pygame.time.get_ticks()
         self.change_side_timer = 2000
+        self.target = None
+        self.target_poz = [None, None]
+        self.target_delay = 2000
+        self.target_st = pygame.time.get_ticks()
 
     def setTarget(self, target):
         self.target = target
@@ -524,13 +537,20 @@ class Bot(pygame.sprite.Sprite):
                 return self.available_side[-1]
             return self.available_side[index - 1]
 
-    def change_side(self):
-        anty_side = {"r": 'l', 'l': 'r', 't': 'b', 'b': 't'}
-        if random() < 0.15:  # 0.25
-            self.side = anty_side[self.side]
+    def change_side(self, custom=False):
+        anti_side = {"r": 'l', 'l': 'r', 't': 'b', 'b': 't'}
+        if custom:
+            if random() > 0.5:
+                self.side = self.get_side(direction=1)
+            else:
+                self.side = self.get_side(direction=-1)
+            return
+
+        if random() < 0.20:  # 0.25
+            self.side = anti_side[self.side]
         else:
-            if random() < 0.25:  # 0.5
-                self.side = anty_side[self.side]
+            if random() < 0.5:  # 0.5
+                self.side = anti_side[self.side]
             else:
                 if random() > 0.5:
                     self.side = self.get_side(direction=1)
@@ -546,20 +566,124 @@ class Bot(pygame.sprite.Sprite):
                                         pygame.sprite.collide_mask)
         c1 = pygame.sprite.spritecollide(self, self.game.all_sprites, False,
                                          pygame.sprite.collide_mask)
-        # TODO обработка столкновений с другими игроками и тд
-        """За обработку столкновений с пулями отвечает сама пуля"""
         if len(c1) != 1:
             print(c1)
         if c or self.game.map.check_collide(self.rect):
             self.rect = self.rect.move(-speed[0], -speed[1])
-            return False
+            if self.target is None:
+                self.change_side()
+
+    def has_path(self, x1, y1, x2, y2):
+        INF = 1000
+        x1 -= OFFSET
+        x2 -= OFFSET
+        y1 -= OFFSET
+        y2 -= OFFSET
+        x, y = x1 * self.game.map.width // MAP_SIZE, \
+               y1 * self.game.map.height // MAP_SIZE
+        distance = [[INF] * self.game.map.width
+                    for _ in range(self.game.map.height)]
+        distance[y][x] = 0
+        prev = [[None] * self.game.map.width
+                for _ in range(self.game.map.height)]
+        queue = [(x, y)]
+        while queue:
+            x, y = queue.pop(0)
+            for dx, dy in (1, 0), (0, 1), \
+                          (-1, 0), (0, -1):
+                next_x, next_y = x + dx, y + dy
+                rect = EmptyBot(next_x * MAP_SIZE // self.game.map.width +
+                                OFFSET,
+                                next_y * MAP_SIZE // self.game.map.height +
+                                OFFSET,
+                                self.rect.width, self.rect.height)
+                if 0 <= next_x < self.game.map.width and \
+                        0 <= next_y < self.game.map.height \
+                        and self.is_free(rect) and \
+                        distance[next_y][next_x] == INF:
+                    distance[next_y][next_x] = distance[y][x] + 1
+                    prev[next_y][next_x] = (x, y)
+                    queue.append((next_x, next_y))
+
+        x, y = x2 * self.game.map.width // MAP_SIZE, \
+               y2 * self.game.map.height // MAP_SIZE
+        if distance[y][x] == INF or (x1, y1) == (x2, y2):
+            return False, (x1, y1)
+        while prev[y][x] != (x1, y1):
+            if prev[y][x] is not None:
+                x, y = prev[y][x]
+            else:
+                break
+        return True, (x * MAP_SIZE // self.game.map.width + OFFSET,
+                      y * MAP_SIZE // self.game.map.height + OFFSET)
+
+    def is_free(self, rect):
+        for i in self.game.wall_group:
+            if not i.isBroken:
+                if pygame.sprite.spritecollideany(i,
+                                                  pygame.sprite.Group(rect)) \
+                        is not None:
+                    return False
         return True
 
+    def get_nearest_players_pos(self):
+        def hypot(x1, y1, x2, y2):
+            return (abs(x1 - x2) + abs(y1 - y2)) ** 0.5
+        lens = {}
+        for i in self.game.player_group:
+            lens[hypot(i.rect.x, i.rect.y, self.rect.x, self.rect.y)] = i
+        pl = lens[min(list(lens.keys()))]
+        return pl.rect.x, pl.rect.y
+
+    def set_side(self, coords):
+        x, y = coords
+        if x < self.rect.x:
+            self.side = 'l'
+        elif x > self.rect.x:
+            self.side = 'r'
+        elif y < self.rect.y:
+            self.side = 't'
+        elif y > self.rect.y:
+            self.side = 'b'
+
     def move(self):
-        if self.target is None:
+        def just_drive():
             self.set_speedxy()
-            if not self.move_collide(self.side, (self.speedx, self.speedy)):
-                self.change_side()
+            now = pygame.time.get_ticks()
+            self.move_collide(self.side, (self.speedx, self.speedy))
+            if now - self.start_time > self.change_side_timer:
+                self.change_side(custom=True)
+                self.start_time = now
+
+        if self.target is None:
+            just_drive()
+        if self.target == 'players':
+            if (self.target_poz[0] is None and self.target_poz[1] is None) \
+                or (self.rect.x <= self.target_poz[0] + self.speed and
+                    self.rect.y <= self.target_poz[1] + self.speed):
+                nex_pos = self.has_path(self.rect.x, self.rect.y,
+                                        *self.get_nearest_players_pos())
+                if nex_pos[0]:
+                    self.target_poz = nex_pos[1]
+                else:
+                    self.target_poz = [None, None]
+            now = pygame.time.get_ticks()
+            if now - self.target_st > self.target_delay:
+                self.target_st = now
+                if None not in self.target_poz:
+
+                    print(self.rect, self.target_poz)
+                    self.rect.x = self.target_poz[0]
+                    self.rect.y = self.target_poz[0]
+                    return
+                    # self.move_collide(self.side, (self.speedx, self.speedx))
+                    # self.set_side(self.target_poz)
+                    # self.set_speedxy()
+                    # self.move_collide(self.side, (self.speedx, self.speedx))
+            else:
+                just_drive()
+        if self.target == 'eagle':
+            just_drive()
 
     def update(self):
         self.move()
@@ -570,14 +694,21 @@ class Bot(pygame.sprite.Sprite):
         if now - self.last_shot > self.shoot_delay:
             self.last_shot = now
             if self.bullet is None or not self.bullet.alive():
-                if random() < 1 / 10:  # 1 / 32
+                # 1 / 32
+                # TODO при пересечении с орлом стрелять по нему
+                if random() < 1 / 10 or self.compare_rect():
                     bullet = Bullet(self.rect, self.side, self.game, self)
                     bullet.add(self.game.all_sprites, self.game.bullets)
                     self.bullet = bullet
 
-    def kill(self):
-        # self.game.bot_manager.new_bot()
+    def compare_rect(self):
+        # TODO Дописать проверку при пересечении с орлом
+        for i in self.game.player_group:
+            if i.compare_rect_with_bot(self.rect):
+                return True
+        return False
 
+    def kill(self):
         super().kill()
 
 
@@ -596,14 +727,15 @@ class BotManager:
 
         self.respawn_time = (190 - game.level * 4 - (
                 self.player_count - 1) * 60) * 10
-
-        self.first_period = self.respawn_time // 8
-        self.second_period = self.first_period
-        self.third_period = 2560
-
         self.start_time = -self.respawn_time
 
-        self.count_bots = sum(self.bot_comb)
+        self.period_timer = pygame.time.get_ticks()
+        self.first_period = self.respawn_time // 8 * 20
+        self.second_period = self.first_period * 2 * 20
+        self.third_period = 2560 + self.second_period
+        print(self.first_period)
+
+        self.global_count_bots = sum(self.bot_comb)
         self.real_time_counter = [0, 't1']
         self.types_tanks = ['t1', 't2', 't3', 't4']
         self.visible_bots = 4 if self.player_count == 1 else 6
@@ -611,22 +743,31 @@ class BotManager:
 
     def update(self):
         now = pygame.time.get_ticks()
-        if len(self.game.mobs_group) <= 0 and self.count_bots <= 0:
+        if len(self.game.mobs_group) <= 0 and self.global_count_bots <= 0:
             self.game.isGameOver = True
             self.game.game_over()
 
         if not self.game.isGameOver and \
                 now - self.start_time > self.respawn_time and \
-                len(self.game.mobs_group) < 4:
+                len(self.game.mobs_group) < 4 and self.global_count_bots > 0:
             Bot(self.game, self.get_tile(),
                 self.game.TILE_SIZE, self.get_type_tank(),
-                sum(self.bot_comb) - self.count_bots)
+                sum(self.bot_comb) - self.global_count_bots)
             self.start_time = now
+
+        if self.first_period < now - self.period_timer < self.second_period:
+            self.setTarget_for_bots('players')
+        elif self.second_period < now - self.period_timer \
+                < self.third_period:
+            self.setTarget_for_bots('eagle')
+        elif now - self.period_timer > self.third_period:
+            self.setTarget_for_bots(None)
+            self.period_timer = now
 
         self.game.mobs_group.update()
 
     def get_type_tank(self):
-        self.count_bots -= 1
+        self.global_count_bots -= 1
         self.real_time_counter[0] += 1
         if self.real_time_counter[0] \
                 > self.bot_comb[self.types_tanks.index(self.real_time_counter[
@@ -640,6 +781,10 @@ class BotManager:
     def get_tile(self):
         from random import choice
         return choice(self.free_tiles_for_spawn)
+
+    def setTarget_for_bots(self, target):
+        for i in self.game.mobs_group:
+            i.setTarget(target)
 
 
 class Map:
