@@ -443,10 +443,12 @@ class Wall(pygame.sprite.Sprite):
         else:
             self.kill()
 
+
 class EmptyBot(pygame.sprite.Sprite):
     def __init__(self, x, y, w, h):
         super().__init__()
         self.rect = pygame.Rect(x, y, w, h)
+
 
 class Bot(pygame.sprite.Sprite):
     images = {
@@ -466,6 +468,8 @@ class Bot(pygame.sprite.Sprite):
         self.type_tanks = type_bot
         self.side = 't'
         self.available_side = ['t', 'l', 'b', 'r']
+        self.sides_flags = [False, False, False, False]
+
         self.move_trigger = False
 
         self.TILE_SIZE = tile_size
@@ -511,12 +515,6 @@ class Bot(pygame.sprite.Sprite):
                             self.image.get_rect().height), pygame.SRCALPHA)
         s.fill(pygame.color.Color('black'))
         self.mask = pygame.mask.from_surface(s)
-
-    def hide(self):
-        # временно скрыть игрока
-        self.hidden = True
-        self.hide_timer = pygame.time.get_ticks()
-        self.rect.center = (WIDTH / 2, HEIGHT + 200)
 
     def set_speedxy(self):
         speeds = {'r': [self.speed, 0],
@@ -572,59 +570,8 @@ class Bot(pygame.sprite.Sprite):
             self.rect = self.rect.move(-speed[0], -speed[1])
             if self.target is None:
                 self.change_side()
-
-    def has_path(self, x1, y1, x2, y2):
-        INF = 1000
-        x1 -= OFFSET
-        x2 -= OFFSET
-        y1 -= OFFSET
-        y2 -= OFFSET
-        x, y = x1 * self.game.map.width // MAP_SIZE, \
-               y1 * self.game.map.height // MAP_SIZE
-        distance = [[INF] * self.game.map.width
-                    for _ in range(self.game.map.height)]
-        distance[y][x] = 0
-        prev = [[None] * self.game.map.width
-                for _ in range(self.game.map.height)]
-        queue = [(x, y)]
-        while queue:
-            x, y = queue.pop(0)
-            for dx, dy in (1, 0), (0, 1), \
-                          (-1, 0), (0, -1):
-                next_x, next_y = x + dx, y + dy
-                rect = EmptyBot(next_x * MAP_SIZE // self.game.map.width +
-                                OFFSET,
-                                next_y * MAP_SIZE // self.game.map.height +
-                                OFFSET,
-                                self.rect.width, self.rect.height)
-                if 0 <= next_x < self.game.map.width and \
-                        0 <= next_y < self.game.map.height \
-                        and self.is_free(rect) and \
-                        distance[next_y][next_x] == INF:
-                    distance[next_y][next_x] = distance[y][x] + 1
-                    prev[next_y][next_x] = (x, y)
-                    queue.append((next_x, next_y))
-
-        x, y = x2 * self.game.map.width // MAP_SIZE, \
-               y2 * self.game.map.height // MAP_SIZE
-        if distance[y][x] == INF or (x1, y1) == (x2, y2):
-            return False, (x1, y1)
-        while prev[y][x] != (x1, y1):
-            if prev[y][x] is not None:
-                x, y = prev[y][x]
-            else:
-                break
-        return True, (x * MAP_SIZE // self.game.map.width + OFFSET,
-                      y * MAP_SIZE // self.game.map.height + OFFSET)
-
-    def is_free(self, rect):
-        for i in self.game.wall_group:
-            if not i.isBroken:
-                if pygame.sprite.spritecollideany(i,
-                                                  pygame.sprite.Group(rect)) \
-                        is not None:
-                    return False
-        return True
+            if self.target is not None:
+                return False, None if not c else c[0]
 
     def get_nearest_players_pos(self):
         def hypot(x1, y1, x2, y2):
@@ -633,18 +580,7 @@ class Bot(pygame.sprite.Sprite):
         for i in self.game.player_group:
             lens[hypot(i.rect.x, i.rect.y, self.rect.x, self.rect.y)] = i
         pl = lens[min(list(lens.keys()))]
-        return pl.rect.x, pl.rect.y
-
-    def set_side(self, coords):
-        x, y = coords
-        if x < self.rect.x:
-            self.side = 'l'
-        elif x > self.rect.x:
-            self.side = 'r'
-        elif y < self.rect.y:
-            self.side = 't'
-        elif y > self.rect.y:
-            self.side = 'b'
+        return pl.rect.centerx, pl.rect.centery
 
     def move(self):
         def just_drive():
@@ -658,30 +594,22 @@ class Bot(pygame.sprite.Sprite):
         if self.target is None:
             just_drive()
         if self.target == 'players':
-            if (self.target_poz[0] is None and self.target_poz[1] is None) \
-                or (self.rect.x <= self.target_poz[0] + self.speed and
-                    self.rect.y <= self.target_poz[1] + self.speed):
-                nex_pos = self.has_path(self.rect.x, self.rect.y,
-                                        *self.get_nearest_players_pos())
-                if nex_pos[0]:
-                    self.target_poz = nex_pos[1]
+            players_pos = self.get_nearest_players_pos()
+            self.side = self.get_preferred_side(players_pos)
+            if self.side is not None:
+                self.set_speedxy()
+                rez = self.move_collide(self.side, [self.speedx, self.speedy])
+                if rez is not None and not rez[0]:
+                    if rez[1] is not None and rez[1].isBroken:
+                        self.shoot(custom=True)
+                    else:
+                        self.sides_flags[
+                            self.available_side.index(self.side)] = True
+                        z = self.breaking_deadlock(players_pos)
+                        if z is not None and not z:
+                            just_drive()
                 else:
-                    self.target_poz = [None, None]
-            now = pygame.time.get_ticks()
-            if now - self.target_st > self.target_delay:
-                self.target_st = now
-                if None not in self.target_poz:
-
-                    print(self.rect, self.target_poz)
-                    self.rect.x = self.target_poz[0]
-                    self.rect.y = self.target_poz[0]
-                    return
-                    # self.move_collide(self.side, (self.speedx, self.speedx))
-                    # self.set_side(self.target_poz)
-                    # self.set_speedxy()
-                    # self.move_collide(self.side, (self.speedx, self.speedx))
-            else:
-                just_drive()
+                    self.sides_flags = [False, False, False, False]
         if self.target == 'eagle':
             just_drive()
 
@@ -689,19 +617,20 @@ class Bot(pygame.sprite.Sprite):
         self.move()
         self.shoot()
 
-    def shoot(self):
+    def shoot(self, custom=False):
         now = pygame.time.get_ticks()
         if now - self.last_shot > self.shoot_delay:
             self.last_shot = now
             if self.bullet is None or not self.bullet.alive():
                 # 1 / 32
                 # TODO при пересечении с орлом стрелять по нему
-                if random() < 1 / 10 or self.compare_rect():
+                if random() < 1 / 10 or self.compare_rect() or custom:
                     bullet = Bullet(self.rect, self.side, self.game, self)
                     bullet.add(self.game.all_sprites, self.game.bullets)
                     self.bullet = bullet
 
     def compare_rect(self):
+        """Сравнивает координаты и при равестве стреляет"""
         # TODO Дописать проверку при пересечении с орлом
         for i in self.game.player_group:
             if i.compare_rect_with_bot(self.rect):
@@ -710,6 +639,90 @@ class Bot(pygame.sprite.Sprite):
 
     def kill(self):
         super().kill()
+
+    def get_preferred_side(self, players_pos):
+        p_x, p_y = players_pos
+        b_x, b_y = self.rect.centerx, self.rect.centery
+        if p_y > b_y:
+            return 'b'
+        if p_y < b_y:
+            return 't'
+        if p_x > b_x:
+            return 'r'
+        if p_x < b_x:
+            return 'l'
+        return 't'
+
+    def breaking_deadlock(self, pos):
+        px, py = pos
+        x, y = self.rect.centerx, self.rect.centery
+        if self.side == 'b' and self.sides_flags[
+                self.available_side.index('b')]:
+            if px > x:
+                self.side = 'r'
+                return
+            if px < x:
+                self.side = 'l'
+                return
+        if self.side == 'r' and self.sides_flags[2]:
+            self.side = 'l'
+            return
+        if self.side == 'l' and self.sides_flags[2] and self.sides_flags[-1]:
+            self.side = 't'
+            return
+        if self.side == 't' and self.sides_flags[2]\
+            and self.sides_flags[-1] and\
+                self.sides_flags[1] and self.sides_flags[0]:
+            return False
+
+        if self.side == 't' and self.sides_flags[
+                self.available_side.index('t')]:
+            if px > x:
+                self.side = 'r'
+                return
+            if px < x:
+                self.side = 'l'
+                return
+        if self.side == 'r' and self.sides_flags[0]:
+            self.side = 'l'
+            return
+        if self.side == 'l' and self.sides_flags[0] and self.sides_flags[-1]:
+            self.side = 't'
+            return
+        if self.side == 'b' and self.sides_flags[0]\
+            and self.sides_flags[-1] and\
+                self.sides_flags[1] and self.sides_flags[2]:
+            return False
+
+        if self.side == 'r' and self.sides_flags[
+                self.available_side.index('r')]:
+            self.side = 'b'
+            return
+        if self.side == 'b' and self.sides_flags[-1]:
+            self.side = 't'
+            return
+        if self.side == 't' and self.sides_flags[-1] and self.sides_flags[2]:
+            self.side = 'l'
+            return
+        if self.side == 'l' and self.sides_flags[2]\
+            and self.sides_flags[-1] and\
+                self.sides_flags[1] and self.sides_flags[0]:
+            return False
+
+        if self.side == 'l' and self.sides_flags[
+                self.available_side.index('l')]:
+            self.side = 'b'
+            return
+        if self.side == 'b' and self.sides_flags[1]:
+            self.side = 't'
+            return
+        if self.side == 't' and self.sides_flags[1] and self.sides_flags[2]:
+            self.side = 'r'
+            return
+        if self.side == 'l' and self.sides_flags[2]\
+            and self.sides_flags[-1] and\
+                self.sides_flags[1] and self.sides_flags[0]:
+            return False
 
 
 class BotManager:
@@ -731,7 +744,7 @@ class BotManager:
 
         self.period_timer = pygame.time.get_ticks()
         self.first_period = self.respawn_time // 8 * 20
-        self.second_period = self.first_period * 2 * 20
+        self.second_period = self.first_period * 2
         self.third_period = 2560 + self.second_period
         print(self.first_period)
 
