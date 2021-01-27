@@ -469,6 +469,7 @@ class Bot(pygame.sprite.Sprite):
         self.side = 't'
         self.available_side = ['t', 'l', 'b', 'r']
         self.sides_flags = [False, False, False, False]
+        self.is_just_blocked = False
 
         self.move_trigger = False
 
@@ -495,8 +496,8 @@ class Bot(pygame.sprite.Sprite):
 
         self.start_time = pygame.time.get_ticks()
         self.change_side_timer = 2000
-        self.target = None
-        self.target_poz = [None, None]
+        self.target = 'players'
+
         self.target_delay = 2000
         self.target_st = pygame.time.get_ticks()
 
@@ -565,7 +566,8 @@ class Bot(pygame.sprite.Sprite):
         c1 = pygame.sprite.spritecollide(self, self.game.all_sprites, False,
                                          pygame.sprite.collide_mask)
         if len(c1) != 1:
-            print(c1)
+            # print(c1)
+            pass
         if c or self.game.map.check_collide(self.rect):
             self.rect = self.rect.move(-speed[0], -speed[1])
             if self.target is None:
@@ -594,28 +596,51 @@ class Bot(pygame.sprite.Sprite):
         if self.target is None:
             just_drive()
         if self.target == 'players':
+
             players_pos = self.get_nearest_players_pos()
-            self.side = self.get_preferred_side(players_pos)
-            if self.side is not None:
-                self.set_speedxy()
-                rez = self.move_collide(self.side, [self.speedx, self.speedy])
-                if rez is not None and not rez[0]:
-                    if rez[1] is not None and rez[1].isBroken:
-                        self.shoot(custom=True)
-                    else:
-                        self.sides_flags[
-                            self.available_side.index(self.side)] = True
-                        z = self.breaking_deadlock(players_pos)
-                        if z is not None and not z:
-                            just_drive()
-                else:
-                    self.sides_flags = [False, False, False, False]
+            pref_side = self.get_preferred_side(players_pos)
+            empty_b = EmptyBot(self.rect.x, self.rect.y,
+                               self.rect.width, self.rect.height)
+            speeds = {'r': [self.speed, 0],
+                      'l': [-self.speed, 0],
+                      't': [0, -self.speed],
+                      'b': [0, self.speed]}
+            # if pref_side is not None and self.is_just_blocked:
+            #     speedx, speedy = speeds[pref_side]
+            #     empty_b.rect = empty_b.rect.move(speedx, speedy)
+            #     if not pygame.sprite.spritecollide(empty_b,
+            #                                        self.game.wall_group, False):
+            #         self.sides_flags[self.available_side.index(pref_side)] = False
+            if pref_side is not None and \
+                    not self.sides_flags[self.available_side.index(pref_side)]:
+                self.side = pref_side
+            elif pref_side is None:
+                self.side = 't'
+                return
+            print(self.sides_flags, '-', pref_side)
+            self.set_speedxy()
+            rez = self.move_collide(self.side, [self.speedx, self.speedy])
+            if rez is not None and not rez[0]:
+                # if rez[1] is not None and rez[1].isBroken:
+                #     self.isStop_b_wall = True
+                #     self.shoot(custom=True)
+                # else:
+                    self.sides_flags[
+                        self.available_side.index(self.side)] = True
+                    if self.sides_flags.count(True) >= 2:
+                        self.is_just_blocked = True
+                    z = self.breaking_deadlock(players_pos)
+                    # if z is not None and not z:
+                    #     just_drive()
+            else:
+                self.sides_flags[self.available_side.index(self.side)] = False
+                self.is_just_blocked = False
         if self.target == 'eagle':
             just_drive()
 
     def update(self):
         self.move()
-        self.shoot()
+        # self.shoot()
 
     def shoot(self, custom=False):
         now = pygame.time.get_ticks()
@@ -651,78 +676,107 @@ class Bot(pygame.sprite.Sprite):
             return 'r'
         if p_x < b_x:
             return 'l'
-        return 't'
+        return None
 
     def breaking_deadlock(self, pos):
         px, py = pos
         x, y = self.rect.centerx, self.rect.centery
-        if self.side == 'b' and self.sides_flags[
-                self.available_side.index('b')]:
-            if px > x:
-                self.side = 'r'
-                return
-            if px < x:
+        if self.side == 'b':
+            if not self.is_just_blocked and self.sides_flags[2]:
                 self.side = 'l'
                 return
-        if self.side == 'r' and self.sides_flags[2]:
-            self.side = 'l'
-            return
-        if self.side == 'l' and self.sides_flags[2] and self.sides_flags[-1]:
-            self.side = 't'
-            return
-        if self.side == 't' and self.sides_flags[2]\
-            and self.sides_flags[-1] and\
-                self.sides_flags[1] and self.sides_flags[0]:
-            return False
-
-        if self.side == 't' and self.sides_flags[
-                self.available_side.index('t')]:
-            if px > x:
+            if self.is_just_blocked and\
+                    self.sides_flags[1] and self.sides_flags[2] and \
+                    not self.sides_flags[0]:
+                self.side = 't'
+                return
+            if self.is_just_blocked and\
+                self.sides_flags[1] and self.sides_flags[2] and \
+                    self.sides_flags[0]:
                 self.side = 'r'
                 return
-            if px < x:
+        if self.side == 'l':
+            if self.is_just_blocked and\
+                    self.sides_flags[1] and self.sides_flags[2]:
+                self.side = 'b'
+                return
+            if not self.is_just_blocked and \
+                    self.sides_flags[1] and self.sides_flags[2]:
+                self.side = 't'
+                return
+        if self.side == 't':
+            if self.is_just_blocked and \
+                    self.sides_flags[0] and \
+                    self.sides_flags[1] and self.sides_flags[2]:
                 self.side = 'l'
                 return
-        if self.side == 'r' and self.sides_flags[0]:
-            self.side = 'l'
-            return
-        if self.side == 'l' and self.sides_flags[0] and self.sides_flags[-1]:
-            self.side = 't'
-            return
-        if self.side == 'b' and self.sides_flags[0]\
-            and self.sides_flags[-1] and\
-                self.sides_flags[1] and self.sides_flags[2]:
-            return False
-
-        if self.side == 'r' and self.sides_flags[
-                self.available_side.index('r')]:
-            self.side = 'b'
-            return
-        if self.side == 'b' and self.sides_flags[-1]:
-            self.side = 't'
-            return
-        if self.side == 't' and self.sides_flags[-1] and self.sides_flags[2]:
-            self.side = 'l'
-            return
-        if self.side == 'l' and self.sides_flags[2]\
-            and self.sides_flags[-1] and\
-                self.sides_flags[1] and self.sides_flags[0]:
-            return False
-
-        if self.side == 'l' and self.sides_flags[
-                self.available_side.index('l')]:
-            self.side = 'b'
-            return
-        if self.side == 'b' and self.sides_flags[1]:
-            self.side = 't'
-            return
-        if self.side == 't' and self.sides_flags[1] and self.sides_flags[2]:
-            self.side = 'r'
-            return
-        if self.side == 'l' and self.sides_flags[2]\
-            and self.sides_flags[-1] and\
-                self.sides_flags[1] and self.sides_flags[0]:
-            return False
+        if self.side == 'r':
+            if self.is_just_blocked and\
+                    self.sides_flags[1] and self.sides_flags[2]:
+                self.side = 'b'
+                return
+            if not self.is_just_blocked and \
+                    self.sides_flags[1] and self.sides_flags[2]:
+                self.side = 't'
+                return
+        # if self.side == 'b':
+        #     if self.sides_flags[self.available_side.index('b')]:
+        #         if px > x:
+        #             self.side = 'r'
+        #             return
+        #         if px < x:
+        #             self.side = 'l'
+        #             return
+        #     if self.sides_flags[-1]:
+        #         self.side = 't'
+        #         return
+        #     if self.sides_flags[1]:
+        #         self.side = 't'
+        #         return
+        #     if self.sides_flags[0] and self.sides_flags[-1] and \
+        #             self.sides_flags[1] and self.sides_flags[2]:
+        #         return False
+        # if self.side == 'r':
+        #     if self.sides_flags[2]:
+        #         self.side = 'l'
+        #         return
+        #     if self.sides_flags[0]:
+        #         self.side = 'l'
+        #         return
+        #     if self.sides_flags[self.available_side.index('r')]:
+        #         self.side = 'b'
+        #         return
+        # if self.side == 'l':
+        #     if self.sides_flags[self.available_side.index('l')]:
+        #         self.side = 'b'
+        #         return
+        #     if self.sides_flags[2] and self.sides_flags[-1]:
+        #         self.side = 't'
+        #         return
+        #     if self.sides_flags[0] and self.sides_flags[-1]:
+        #         self.side = 't'
+        #         return
+        #     if self.sides_flags[2]\
+        #         and self.sides_flags[-1] and\
+        #             self.sides_flags[1] and self.sides_flags[0]:
+        #         return False
+        # if self.side == 't':
+        #     if self.sides_flags[self.available_side.index('t')]:
+        #         if px > x:
+        #             self.side = 'r'
+        #             return
+        #         if px < x:
+        #             self.side = 'l'
+        #             return
+        #     if self.sides_flags[-1] and self.sides_flags[2]:
+        #         self.side = 'l'
+        #         return
+        #     if self.sides_flags[1] and self.sides_flags[2]:
+        #         self.side = 'r'
+        #         return
+        #     if self.sides_flags[2] and self.sides_flags[-1] and \
+        #             self.sides_flags[1] and self.sides_flags[0]:
+        #         return False
 
 
 class BotManager:
@@ -772,9 +826,9 @@ class BotManager:
             self.setTarget_for_bots('players')
         elif self.second_period < now - self.period_timer \
                 < self.third_period:
-            self.setTarget_for_bots('eagle')
+            self.setTarget_for_bots('players')  # None
         elif now - self.period_timer > self.third_period:
-            self.setTarget_for_bots(None)
+            self.setTarget_for_bots('players')  # None
             self.period_timer = now
 
         self.game.mobs_group.update()
@@ -981,7 +1035,7 @@ fullscreen = False
 if __name__ == '__main__':
     clock = pygame.time.Clock()
     running = True
-    game = Game(2, 1)
+    game = Game(1, 4)
     while running:
         screen.fill(pygame.Color('black'))
         for event in pygame.event.get():
