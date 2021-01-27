@@ -466,13 +466,15 @@ class Bot(pygame.sprite.Sprite):
 
     def __init__(self, game, coords, tile_size, type_bot: str, number_tank):
         super().__init__(game.mobs_group, game.all_sprites)
+
         self.game = game
         self.type_tanks = type_bot
         self.side = 't'
         self.prev_side = 't'
         self.available_side = ['t', 'l', 'b', 'r']
         self.sides_flags = [False, False, False, False]
-        self.is_just_blocked = False
+        self.is_stop_y = False
+        self.is_stop_x = False
 
         self.move_trigger = False
 
@@ -632,38 +634,45 @@ class Bot(pygame.sprite.Sprite):
         if self.target is None:
             just_drive()
         if self.target == 'players':
+
+            # Узнаем позицию цели
             players_pos = self.get_nearest_players_pos()
+            # Узнаем сторону, в которую нам предпочтительно ехать
             pref_side = self.get_preferred_side(players_pos)
+            print('1', self.side, self.prev_side,
+                  pref_side, '-', self.sides_flags,
+                  (self.is_stop_x, self.is_stop_y))
+            # Если стороны нет (т.е мы приехали, то останавливаемся)
             if pref_side is None:
                 self.side = 't'
+                self.prev_side = 'r'
                 return
             rez = self.check_side(pref_side)
             if rez:
                 self.side = pref_side
-            print(self.side, self.prev_side, pref_side, '-', self.sides_flags)
+
+            print('2', self.side, self.prev_side,
+                  pref_side, '-', self.sides_flags,
+                  (self.is_stop_x, self.is_stop_y))
             self.set_speedxy()
             rez = self.move_collide(self.side, [self.speedx, self.speedy])
             if rez is not None and not rez[0]:
-                # if rez[1] is not None and rez[1].isBroken:
-                #     self.isStop_b_wall = True
-                #     self.shoot(custom=True)
-                # else:
+                if rez[1] is not None and rez[1].isBroken and\
+                        random() < 1 / 3:
+                    # self.shoot(custom=True)
+                    return
+                else:
                     self.sides_flags[
                         self.available_side.index(self.side)] = True
-                #     if self.sides_flags.count(True) >= 2:
-                #         self.is_just_blocked = True
-                    z = self.breaking_deadlock(players_pos, pref_side)
-                    # if z is not None and not z:
-                    #     just_drive()
+                    self.breaking_deadlock(players_pos, pref_side)
             else:
                 self.sides_flags[self.available_side.index(self.side)] = False
-                self.is_just_blocked = False
         if self.target == 'eagle':
             just_drive()
 
     def update(self):
         self.move()
-        # self.shoot()
+        self.shoot()
 
     def shoot(self, custom=False):
         now = pygame.time.get_ticks()
@@ -691,14 +700,30 @@ class Bot(pygame.sprite.Sprite):
     def get_preferred_side(self, players_pos):
         p_x, p_y = players_pos
         b_x, b_y = self.rect.centerx, self.rect.centery
-        if p_y > b_y:
-            return 'b'
-        if p_y < b_y:
-            return 't'
-        if p_x > b_x:
-            return 'r'
-        if p_x < b_x:
-            return 'l'
+        if p_x == b_x and b_y == p_y:
+            self.is_stop_y = False
+            self.is_stop_x = False
+            return None
+        if p_y >= b_y and not self.is_stop_y:
+            if p_y != b_y:
+                return 'b'
+            self.is_stop_y = True
+            self.is_stop_x = False
+        if p_y <= b_y and not self.is_stop_y:
+            if p_y != b_y:
+                return 't'
+            self.is_stop_y = True
+            self.is_stop_x = False
+        if p_x >= b_x and not self.is_stop_x:
+            if p_x != b_x:
+                return 'r'
+            self.is_stop_y = False
+            self.is_stop_x = True
+        if p_x < b_x and not self.is_stop_x:
+            if p_x != b_x:
+                return 'l'
+            self.is_stop_y = False
+            self.is_stop_x = True
         return None
 
     def breaking_deadlock(self, pos, pref_side):
@@ -706,12 +731,11 @@ class Bot(pygame.sprite.Sprite):
         px, py = pos
         x, y = self.rect.centerx, self.rect.centery
         if self.side == 'b':
-            if self.prev_side == anti_side[self.side]\
-                    or (self.prev_side in ['r', 'l'] and pref_side == 'b'):
+            if self.prev_side in [anti_side[self.side], 'b']:
                 self.side = 'l' if random() < 1 / 2 else 'r'
                 self.prev_side = 'b'
                 return
-            if self.prev_side != self.side:
+            else:
                 if random() < 1 / 2:
                     self.side = anti_side[self.prev_side]
                     self.prev_side = 'b'
@@ -720,12 +744,11 @@ class Bot(pygame.sprite.Sprite):
                     self.side = 't'
                     return
         if self.side == 't':
-            if self.prev_side in [anti_side[self.side], 't'] \
-                    or (self.prev_side in ['r', 'l'] and pref_side == 'b'):
+            if self.prev_side in [anti_side[self.side], 't']:
                 self.side = 'l' if random() < 1 / 2 else 'r'
-                self.prev_side = 'b'
+                self.prev_side = 't'
                 return
-            if self.prev_side != self.side:
+            else:
                 if random() < 1 / 2:
                     self.side = anti_side[self.prev_side]
                     self.prev_side = 't'
@@ -733,68 +756,34 @@ class Bot(pygame.sprite.Sprite):
                 else:
                     self.side = 'b'
                     return
-                # if self.prev_side == 'l':
-                #     if pref_side == 'l':
-                #         self.side = 'r'
-                #         self.prev_side = 'b'
-                #         return
-                #     if pref_side == 'r':
-                #         self.side = 'l'
-                #         self.prev_side = 'b'
-                #         return
-                #     if pref_side == 'b':
-                #         self.side = 'r'  # l
-                #         self.prev_side = 't'
-                #         return
-                #     if pref_side == 't':
-                #         self.side = 'r'
-                #         self.prev_side = 'b'
-                #         return
-                # if self.prev_side == 'r':
-                #     if pref_side == 'r':
-                #         self.side = 'l'
-                #         self.prev_side = 'b'
-                #         return
-
         if self.side == 'l':
             if self.prev_side == self.side:
                 self.side = 't' if random() < 1 / 2 else 'b'
-                self.prev_side = 'b'
+                self.prev_side = 'l'
                 return
-            if self.prev_side != self.side:
-                if pref_side == 'b':
-                    if random() < 1 / 2:
-                        self.side = 't'
-                        self.prev_side = 'l'
-                        return
-                    else:
-                        self.side = 'r'
-                        self.prev_side = 'b'
-                        return
-                if pref_side == 't':
-                    self.side = 'b'
+            else:
+                if random() < 1 / 2:
+                    self.side = 't' if self.prev_side == 'b' else 'b'
                     self.prev_side = 'l'
+                    return
+                else:
+                    self.side = 'r'
+                    self.prev_side = 'b'
                     return
         if self.side == 'r':
             if self.prev_side == self.side:
                 self.side = 't' if random() < 1 / 2 else 'b'
                 self.prev_side = 'b'
                 return
-            if self.prev_side != self.side:
-                if pref_side == 'b':
-                    if random() < 1 / 2:
-                        self.side = 't'
-                        self.prev_side = 'r'
-                        return
-                    else:
-                        self.side = 'l'
-                        self.prev_side = 'b'
-                        return
-                if pref_side == 't':
-                    self.side = 'b'
-                    self.prev_side = 'l'
+            else:
+                if random() < 1 / 2:
+                    self.side = 't' if self.prev_side == 'b' else 'b'
+                    self.prev_side = 'r'
                     return
-
+                else:
+                    self.side = 'l'
+                    self.prev_side = 'b'
+                    return
 
 
 class BotManager:
@@ -1056,7 +1045,7 @@ fullscreen = False
 if __name__ == '__main__':
     clock = pygame.time.Clock()
     running = True
-    game = Game(1, 4)
+    game = Game(1, 5)
     while running:
         screen.fill(pygame.Color('black'))
         for event in pygame.event.get():
