@@ -501,7 +501,7 @@ class Bot(pygame.sprite.Sprite):
 
         self.start_time = pygame.time.get_ticks()
         self.change_side_timer = 2000
-        self.target = 'players'
+        self.target = None
 
         self.target_delay = 2000
         self.target_st = pygame.time.get_ticks()
@@ -631,44 +631,42 @@ class Bot(pygame.sprite.Sprite):
                 self.change_side(custom=True)
                 self.start_time = now
 
-        if self.target is None:
-            just_drive()
-        if self.target == 'players':
-
-            # Узнаем позицию цели
-            players_pos = self.get_nearest_players_pos()
+        def go_to(target_pos):
             # Узнаем сторону, в которую нам предпочтительно ехать
-            pref_side = self.get_preferred_side(players_pos)
-            print('1', self.side, self.prev_side,
-                  pref_side, '-', self.sides_flags,
-                  (self.is_stop_x, self.is_stop_y))
+            pref_side = self.get_preferred_side(target_pos)
             # Если стороны нет (т.е мы приехали, то останавливаемся)
             if pref_side is None:
-                self.side = 't'
-                self.prev_side = 'r'
                 return
             rez = self.check_side(pref_side)
             if rez:
                 self.side = pref_side
-
-            print('2', self.side, self.prev_side,
+            print(self.side, self.prev_side,
                   pref_side, '-', self.sides_flags,
                   (self.is_stop_x, self.is_stop_y))
             self.set_speedxy()
             rez = self.move_collide(self.side, [self.speedx, self.speedy])
             if rez is not None and not rez[0]:
-                if rez[1] is not None and rez[1].isBroken and\
+                if rez[1] is not None and rez[1].isBroken and \
                         random() < 1 / 3:
-                    # self.shoot(custom=True)
+                    self.shoot(custom=True)
                     return
                 else:
                     self.sides_flags[
                         self.available_side.index(self.side)] = True
-                    self.breaking_deadlock(players_pos, pref_side)
+                    self.breaking_deadlock(target_pos)
             else:
                 self.sides_flags[self.available_side.index(self.side)] = False
-        if self.target == 'eagle':
+
+        if self.target is None:
             just_drive()
+        if self.target == 'players':
+            # Узнаем позицию цели
+            players_pos = self.get_nearest_players_pos()
+            go_to(players_pos)
+
+        if self.target == 'eagle':
+            rect = self.game.eagle.rect
+            go_to((rect.centerx, rect.centery))
 
     def update(self):
         self.move()
@@ -688,10 +686,11 @@ class Bot(pygame.sprite.Sprite):
 
     def compare_rect(self):
         """Сравнивает координаты и при равестве стреляет"""
-        # TODO Дописать проверку при пересечении с орлом
         for i in self.game.player_group:
             if i.compare_rect_with_bot(self.rect):
                 return True
+        if self.game.eagle.compare_rect_with_bot(self.rect):
+            return True
         return False
 
     def kill(self):
@@ -705,28 +704,29 @@ class Bot(pygame.sprite.Sprite):
             self.is_stop_x = False
             return None
         if p_y >= b_y and not self.is_stop_y:
-            if p_y != b_y:
+            if not (p_y - self.speed <= b_y <= p_y + self.speed):
                 return 'b'
             self.is_stop_y = True
             self.is_stop_x = False
-        if p_y <= b_y and not self.is_stop_y:
-            if p_y != b_y:
+        elif p_y <= b_y and not self.is_stop_y:
+            if not (p_y - self.speed <= b_y <= p_y + self.speed):
                 return 't'
             self.is_stop_y = True
             self.is_stop_x = False
-        if p_x >= b_x and not self.is_stop_x:
-            if p_x != b_x:
+        if p_x >= b_x:
+            if not (p_x - self.speed <= b_x <= p_x + self.speed):
                 return 'r'
             self.is_stop_y = False
             self.is_stop_x = True
-        if p_x < b_x and not self.is_stop_x:
-            if p_x != b_x:
+        elif p_x <= b_x:
+            if not (p_x - self.speed <= b_x <= p_x + self.speed):
                 return 'l'
             self.is_stop_y = False
             self.is_stop_x = True
+            return
         return None
 
-    def breaking_deadlock(self, pos, pref_side):
+    def breaking_deadlock(self, pos):
         anti_side = {'r': 'l', 'l': 'r', 't': 'b', 'b': 't'}
         px, py = pos
         x, y = self.rect.centerx, self.rect.centery
@@ -807,7 +807,6 @@ class BotManager:
         self.first_period = self.respawn_time // 8 * 20
         self.second_period = self.first_period * 2
         self.third_period = 2560 + self.second_period
-        print(self.first_period)
 
         self.global_count_bots = sum(self.bot_comb)
         self.real_time_counter = [0, 't1']
@@ -833,9 +832,9 @@ class BotManager:
             self.setTarget_for_bots('players')
         elif self.second_period < now - self.period_timer \
                 < self.third_period:
-            self.setTarget_for_bots('players')  # None
+            self.setTarget_for_bots('eagle')  # None
         elif now - self.period_timer > self.third_period:
-            self.setTarget_for_bots('players')  # None
+            self.setTarget_for_bots(None)  # None
             self.period_timer = now
 
         self.game.mobs_group.update()
@@ -890,9 +889,6 @@ class Map:
         return self.map.layernames[name]
 
     def get_tile_id(self, gid):
-        # print(gid)
-        # print(self.map.tiledgidmap)
-        # print(self.map.tiledgidmap[gid])
         return self.map.tiledgidmap[gid]
 
     def get_tiled_by_id(self, id):
@@ -949,6 +945,12 @@ class Eagle(pygame.sprite.Sprite):
                                                          self.TILE_SIZE))
         self.mask = pygame.mask.from_surface(self.image)
         self.isBroken = True
+
+    def compare_rect_with_bot(self, rect: pygame.rect.Rect):
+        if rect.x <= self.rect.x <= rect.x + rect.width\
+                or rect.y <= self.rect.y <= rect.y + rect.width:
+            return True
+        return False
 
 
 class Game:
@@ -1045,7 +1047,7 @@ fullscreen = False
 if __name__ == '__main__':
     clock = pygame.time.Clock()
     running = True
-    game = Game(1, 5)
+    game = Game(1, 1)
     while running:
         screen.fill(pygame.Color('black'))
         for event in pygame.event.get():
