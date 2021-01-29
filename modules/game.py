@@ -87,8 +87,8 @@ class BotManager:
         # TODO когда необходимого шаблона нет, то
         #  необходимо или зациклить или написать генератор шаблона
         try:
-            # self.bot_comb = mobs_count.count[self.game.level]
-            self.bot_comb = mobs_count.count[10]
+            self.bot_comb = mobs_count.count[self.game.level]
+            # self.bot_comb = mobs_count.count[10]
         except KeyError:
             raise KeyError('Комбинация ботов не найдена')
 
@@ -124,10 +124,12 @@ class BotManager:
         if not self.game.isGameOver and \
                 now - self.start_time > self.respawn_time and \
                 len(self.game.mobs_group) < 4 and self.global_count_bots > 0:
-            Bot(self.game, self.get_tile(),
-                self.game.TILE_SIZE, self.get_type_tank(),
-                sum(self.bot_comb) - self.global_count_bots)
-            self.start_time = now
+            type_t = self.get_type_tank()
+            if type_t:
+                Bot(self.game, self.get_tile(),
+                    self.game.TILE_SIZE, type_t,
+                    sum(self.bot_comb) - self.global_count_bots)
+                self.start_time = now
 
         # Проверяем на периоды и устанавливаем цели.
         # Через сравнения достагается цикличность периодов
@@ -165,13 +167,13 @@ class BotManager:
     def get_tile(self):
         from random import choice
         # Рандомно выбираем место для спавна бота
-        while True:
-            tile = choice(self.free_tiles_for_spawn)
-            em = EmptyBot(tile[0], tile[1],
-                          self.game.TILE_SIZE, self.game.TILE_SIZE)
-            if not pygame.sprite.spritecollide(em,
-                                               self.game.all_sprites, False):
-                return tile
+        tile = choice(self.free_tiles_for_spawn)
+        em = EmptyBot(tile[0], tile[1],
+                      self.game.TILE_SIZE, self.game.TILE_SIZE)
+        if not pygame.sprite.spritecollide(em,
+                                           self.game.all_sprites, False):
+            return tile
+        return False
 
     def setTarget_for_bots(self, target):
         # Устанавливаем цель для всех ботов
@@ -273,6 +275,7 @@ class Game:
         self.player_group = pygame.sprite.Group()
         self.wall_group = pygame.sprite.Group()
         self.bullets = pygame.sprite.Group()
+        self.map_group = pygame.sprite.Group()
         self.eagle = self.createEagle()
 
         # Создаем спрайты стен
@@ -297,10 +300,6 @@ class Game:
             raise Exception('Онлайн еще не готов')
         else:
             raise Exception('Неверный тип игры')
-        if self.player1 is not None:
-            self.player1.add(self.player_group, self.all_sprites)
-        if self.player2 is not None:
-            self.player2.add(self.player_group, self.all_sprites)
         self.bot_manager = BotManager(self)
 
     def createWalls(self):
@@ -309,7 +308,7 @@ class Game:
         for i in self.map.get_objects('walls'):
             x, y = i.x / self.map.koeff + OFFSET, i.y / self.map.koeff + OFFSET
             wall = Wall(x, y, self.map.get_tile_id(i.gid), self.TILE_SIZE)
-            wall.add(self.all_sprites, self.wall_group)
+            wall.add(self.all_sprites, self.wall_group, self.map_group)
 
     def createEagle(self):
         tile = self.map.get_objects('eagle')[0]
@@ -350,7 +349,7 @@ fullscreen = False
 if __name__ == '__main__':
     clock = pygame.time.Clock()
     running = True
-    game = Game(1, 1)
+    game = Game(1, 5)
     while running:
         screen.fill(pygame.Color('black'))
         for event in pygame.event.get():

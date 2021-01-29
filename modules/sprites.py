@@ -24,7 +24,7 @@ class Player(pygame.sprite.Sprite):
     }
 
     def __init__(self, game, coords, tile_size, player):
-        super().__init__()
+        super().__init__(game.player_group, game.map_group, game.all_sprites)
         self.game = game
         self.type_tanks = 't1'
         self.player = player
@@ -86,11 +86,9 @@ class Player(pygame.sprite.Sprite):
         self.side = side
         self.load_tanks_image()
         self.rect = self.rect.move(speed[0], speed[1])
-        c = pygame.sprite.spritecollide(self, self.game.all_sprites, False,
+        c = pygame.sprite.spritecollide(self, self.game.map_group, False,
                                         pygame.sprite.collide_mask)
         del c[c.index(self)]
-        if self.game.eagle in c:
-            del c[c.index(self.game.eagle)]
         # TODO обработка столкновений с другими игроками и тд
         """За обработку столкновений с пулями отвечает сама пуля"""
         if self.game.map.check_collide(self.rect) or c:
@@ -232,7 +230,7 @@ class Bot(pygame.sprite.Sprite):
     }
 
     def __init__(self, game, coords, tile_size, type_bot: str, number_tank):
-        super().__init__(game.mobs_group, game.all_sprites)
+        super().__init__(game.map_group, game.mobs_group, game.all_sprites)
 
         self.game = game
         self.type_tanks = type_bot
@@ -256,7 +254,7 @@ class Bot(pygame.sprite.Sprite):
         self.rect.x = self.coords[0]
         self.rect.y = self.coords[1]
 
-        self.speed = 1
+        self.speed = 2
         self.speedx = 0
         self.speedy = 0
         self.lives = 1
@@ -377,11 +375,9 @@ class Bot(pygame.sprite.Sprite):
         self.side = side
         self.load_tanks_image()
         self.rect = self.rect.move(speed[0], speed[1])
-        c = pygame.sprite.spritecollide(self, self.game.all_sprites, False,
+        c = pygame.sprite.spritecollide(self, self.game.map_group, False,
                                         pygame.sprite.collide_mask)
         del c[c.index(self)]
-        if self.game.eagle in c:
-            del c[c.index(self.game.eagle)]
         if c or self.game.map.check_collide(self.rect):
             self.rect = self.rect.move(-speed[0], -speed[1])
             if self.target is None:
@@ -389,7 +385,7 @@ class Bot(pygame.sprite.Sprite):
             if self.target is not None:
                 return False, None if not c else c[0]
 
-    def get_nearest_players_pos(self):
+    def get_nearest_players(self):
         def hypot(x1, y1, x2, y2):
             return (abs(x1 - x2) + abs(y1 - y2)) ** 0.5
         lens = {}
@@ -406,8 +402,10 @@ class Bot(pygame.sprite.Sprite):
         empty_b = EmptyBot(self.rect.x, self.rect.y,
                            self.rect.width, self.rect.height)
         empty_b.rect = empty_b.rect.move(speeds[pref_side])
-        if pygame.sprite.spritecollide(empty_b, self.game.wall_group, False,
-                                       pygame.sprite.collide_mask):
+        c = pygame.sprite.spritecollide(empty_b, self.game.map_group, False,
+                                       pygame.sprite.collide_mask)
+        del c[c.index(self)]
+        if c:
             return False
         return True
 
@@ -446,6 +444,19 @@ class Bot(pygame.sprite.Sprite):
                 return True
         return False
 
+    def get_side_by_pos(self, target_rect):
+        if abs(target_rect.centerx - self.rect.centerx) > abs(
+                target_rect.centery - self.rect.centery):
+            if target_rect.centerx >= self.rect.centerx:
+                return 'r'
+            if target_rect.centerx <= self.rect.centerx:
+                return 'l'
+        else:
+            if target_rect.centery >= self.rect.centery:
+                return 'b'
+            if target_rect.centery <= self.rect.centery:
+                return 't'
+
     def move(self):
         def just_drive():
             self.set_speedxy()
@@ -460,13 +471,14 @@ class Bot(pygame.sprite.Sprite):
             pref_side = self.get_preferred_side(target_rect)
             # Если стороны нет (т.е мы приехали, то останавливаемся)
             if pref_side is None:
+                self.move_collide(self.get_side_by_pos(target_rect), (0, 0))
                 return
             rez = self.check_side(pref_side)
             if rez:
                 self.side = pref_side
-            print(self.side, self.prev_side,
-                  pref_side, '-', self.sides_flags,
-                  (self.is_stop_x, self.is_stop_y))
+            # print(self.side, self.prev_side,
+            #       pref_side, '-', self.sides_flags,
+            #       (self.is_stop_x, self.is_stop_y), rez)
             self.set_speedxy()
             rez = self.move_collide(self.side, [self.speedx, self.speedy])
             if rez is not None and not rez[0]:
@@ -486,9 +498,8 @@ class Bot(pygame.sprite.Sprite):
             just_drive()
         if self.target == 'players':
             # Узнаем позицию цели
-            players_rect = self.get_nearest_players_pos()
+            players_rect = self.get_nearest_players()
             go_to(players_rect)
-
         if self.target == 'eagle':
             rect = self.game.eagle.rect
             go_to(rect)
@@ -521,17 +532,13 @@ class Bot(pygame.sprite.Sprite):
         b_x, b_y = self.rect.centerx, self.rect.centery
         if (p_x == b_x and b_y == p_y) or \
             (players_rect.left == self.rect.right and
-                (players_rect.top == self.rect.top or
-                    players_rect.bottom == self.rect.bottom)) or\
+                players_rect.top <= b_y <= players_rect.bottom) or\
             (players_rect.right == self.rect.left and
-                (players_rect.top == self.rect.top or
-                    players_rect.bottom == self.rect.bottom)) or \
+                players_rect.top <= b_y <= players_rect.bottom) or\
             (players_rect.top == self.rect.bottom and
-                (players_rect.left == self.rect.left or
-                    players_rect.right == self.rect.right)) or \
+                players_rect.left <= b_x <= players_rect.right) or\
             (players_rect.bottom == self.rect.top and
-                (players_rect.left == self.rect.left or
-                    players_rect.right == self.rect.right)):
+                players_rect.left <= b_x <= players_rect.right):
             self.is_stop_y = False
             self.is_stop_x = False
             return None
@@ -624,7 +631,7 @@ class Eagle(pygame.sprite.Sprite):
     }
 
     def __init__(self, game, x, y, tile_size):
-        super().__init__(game.all_sprites)
+        super().__init__(game.all_sprites, game.map_group)
         self.TILE_SIZE = tile_size
         self.image = load_image(f'{WORLDIMG_DIR}{self.images["normal"]}')
         self.image = pygame.transform.scale(self.image, (self.TILE_SIZE,
