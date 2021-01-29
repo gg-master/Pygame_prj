@@ -1,6 +1,4 @@
 import pygame
-import os
-import sys
 from settings import *
 from random import random
 from default_funcs import load_image
@@ -52,6 +50,16 @@ class Player(pygame.sprite.Sprite):
         self.shoot_delay = 200
         self.last_shot = pygame.time.get_ticks()
 
+    def set_properties(self):
+        if self.type_tanks == 't1':
+            self.speed = 1
+        elif self.type_tanks == 't2':
+            self.speed = 3
+        elif self.type_tanks == 't3':
+            self.shoot_delay = 100
+        elif self.type_tanks == 't4':
+            self.lives = 4
+
     def load_tanks_image(self):
         self.move_trigger = not self.move_trigger
         image = load_image(f'{DIR_FOR_TANKS_IMG}{self.type_tanks}\\'
@@ -78,19 +86,17 @@ class Player(pygame.sprite.Sprite):
         self.side = side
         self.load_tanks_image()
         self.rect = self.rect.move(speed[0], speed[1])
-        c = pygame.sprite.spritecollide(self, self.game.wall_group, False,
+        c = pygame.sprite.spritecollide(self, self.game.all_sprites, False,
                                         pygame.sprite.collide_mask)
-        c1 = pygame.sprite.spritecollide(self, self.game.all_sprites, False,
-                                         pygame.sprite.collide_mask)
+        del c[c.index(self)]
+        if self.game.eagle in c:
+            del c[c.index(self.game.eagle)]
         # TODO обработка столкновений с другими игроками и тд
         """За обработку столкновений с пулями отвечает сама пуля"""
-        if len(c1) != 1:
-            print(c1)
-        if c or self.game.map.check_collide(self.rect):
+        if self.game.map.check_collide(self.rect) or c:
             self.rect = self.rect.move(-speed[0], -speed[1])
 
     def move(self, keystate, obj):
-        # print(obj['up'])
         if keystate[pygame.key.key_code(obj['up'])]:
             self.move_collide('t', (0, -self.speed))
         elif keystate[pygame.key.key_code(obj['down'])]:
@@ -105,6 +111,7 @@ class Player(pygame.sprite.Sprite):
             self.hidden = False
             self.rect.centerx = WIDTH / 2
             self.rect.bottom = HEIGHT - 10
+        # TODO При игре по сети необходимо как то получать нажатые клавиши
         keystate = pygame.key.get_pressed()
         if self.player == 1:
             obj = PLAYER1
@@ -139,7 +146,7 @@ class Bullet(pygame.sprite.Sprite):
         'b': 'b_b.png'
     }
 
-    def __init__(self, rect_tank, side: str, game, who_shoot):
+    def __init__(self, rect_tank, side: str, game, who_shoot, speed=5):
         super().__init__()
         self.who_shoot = who_shoot
         self.game = game
@@ -152,11 +159,11 @@ class Bullet(pygame.sprite.Sprite):
         self.mask = pygame.mask.from_surface(self.image)
         self.rect = self.image.get_rect()
         self.side = side
-        self.speed = 5
+        self.speed = speed
         self.speedy, self.speedx = 0, 0
         self.set_rect(rect_tank)
 
-    def update(self):
+    def update(self, *event):
         self.rect = self.rect.move(self.speedx, self.speedy)
         # удалить спрайт, если он заходит за верхнюю часть экрана
         if self.game.map.check_collide(self.rect):
@@ -214,14 +221,14 @@ class EmptyBot(pygame.sprite.Sprite):
 
 class Bot(pygame.sprite.Sprite):
     images = {
-        't0': 't_w.png',
-        'l0': 't_w_l.png',
-        'r0': 't_w_r.png',
+        't0': 't_w.png', 'l0': 't_w_l.png', 'r0': 't_w_r.png',
         'b0': 't_w_b.png',
-        't1': 't_w1.png',
-        'l1': 't_w1_l.png',
-        'r1': 't_w1_r.png',
-        'b1': 't_w1_b.png'
+        't1': 't_w1.png', 'l1': 't_w1_l.png', 'r1': 't_w1_r.png',
+        'b1': 't_w1_b.png',
+        't00': 't_r.png', 'l00': 't_r_l.png', 'r00': 't_r_r.png',
+        'b00': 't_r_b.png',
+        't11': 't_r1.png', 'l11': 't_r1_l.png', 'r11': 't_r1_r.png',
+        'b11': 't_r1_b.png',
     }
 
     def __init__(self, game, coords, tile_size, type_bot: str, number_tank):
@@ -229,18 +236,19 @@ class Bot(pygame.sprite.Sprite):
 
         self.game = game
         self.type_tanks = type_bot
+        self.number = number_tank
         self.side = 't'
         self.prev_side = 't'
         self.available_side = ['t', 'l', 'b', 'r']
         self.sides_flags = [False, False, False, False]
-        self.is_stop_y = False
-        self.is_stop_x = False
+        self.is_stop_y = self.is_stop_x = False
 
-        self.move_trigger = False
+        self.move_trigger = self.is_bonus = self.bonus_trigger = False
+        self.bonus_trigger_delay = 300
+        self.bonus_trigger_timer = pygame.time.get_ticks()
 
         self.TILE_SIZE = tile_size
-        self.image = None
-        self.mask = None
+        self.image = self.mask = None
         self.load_tanks_image()
 
         self.coords = coords
@@ -248,23 +256,48 @@ class Bot(pygame.sprite.Sprite):
         self.rect.x = self.coords[0]
         self.rect.y = self.coords[1]
 
-        self.speed = 2
+        self.speed = 1
         self.speedx = 0
         self.speedy = 0
         self.lives = 1
         self.hidden = False
         self.hide_timer = pygame.time.get_ticks()
-        self.bullet = None
 
-        self.shoot_delay = 200
+        self.bullet = None
+        self.bullet_speed = 5
+        self.shoot_delay = 300
         self.last_shot = pygame.time.get_ticks()
 
         self.start_time = pygame.time.get_ticks()
         self.change_side_timer = 2000
+
         self.target = None
 
-        self.target_delay = 2000
-        self.target_st = pygame.time.get_ticks()
+        self.set_properties()
+
+    def update(self, *event):
+        self.move()
+        self.shoot()
+
+    def kill(self):
+        if self.lives > 1:
+            self.lives -= 1
+            # TODO при уменьшении жизней у бота (самый крупный)
+            #  необходимо изменить его внешний вид
+            return
+        super().kill()
+
+    def set_properties(self):
+        if self.number in [4, 11, 18]:
+            self.is_bonus = True
+        if self.type_tanks == 't1':
+            self.speed = 1
+        elif self.type_tanks == 't2':
+            self.speed = 3
+        elif self.type_tanks == 't3':
+            self.shoot_delay = 100
+        elif self.type_tanks == 't4':
+            self.lives = 4
 
     def setTarget(self, target):
         self.target = target
@@ -277,8 +310,20 @@ class Bot(pygame.sprite.Sprite):
 
     def load_tanks_image(self):
         self.move_trigger = not self.move_trigger
+        if self.is_bonus:
+            self.bonus_trigger = not self.bonus_trigger
+        now = pygame.time.get_ticks()
+        req = f"{self.side}{int(self.move_trigger)}"
+        """Если у нас танк является бонусным, то он должен мигать"""
+        if now - self.bonus_trigger_timer > self.bonus_trigger_delay and\
+                self.is_bonus:
+            if now - self.bonus_trigger_timer > self.bonus_trigger_delay * 2:
+                self.bonus_trigger_timer = now
+            req = f"{self.side}{int(self.move_trigger)}" \
+                f"{int(self.move_trigger)}"
+        name_image = self.images[req]
         image = load_image(f'{DIR_FOR_TANKS_IMG}{self.type_tanks}\\'
-                           f'{self.images[f"{self.side}{int(self.move_trigger)}"]}')
+                           f'{name_image}')
         self.image = pygame.transform.scale(image, (self.TILE_SIZE -
                                                     self.TILE_SIZE // 8,
                                                     self.TILE_SIZE -
@@ -332,13 +377,11 @@ class Bot(pygame.sprite.Sprite):
         self.side = side
         self.load_tanks_image()
         self.rect = self.rect.move(speed[0], speed[1])
-        c = pygame.sprite.spritecollide(self, self.game.wall_group, False,
+        c = pygame.sprite.spritecollide(self, self.game.all_sprites, False,
                                         pygame.sprite.collide_mask)
-        c1 = pygame.sprite.spritecollide(self, self.game.all_sprites, False,
-                                         pygame.sprite.collide_mask)
-        if len(c1) != 1:
-            # print(c1)
-            pass
+        del c[c.index(self)]
+        if self.game.eagle in c:
+            del c[c.index(self.game.eagle)]
         if c or self.game.map.check_collide(self.rect):
             self.rect = self.rect.move(-speed[0], -speed[1])
             if self.target is None:
@@ -353,20 +396,35 @@ class Bot(pygame.sprite.Sprite):
         for i in self.game.player_group:
             lens[hypot(i.rect.x, i.rect.y, self.rect.x, self.rect.y)] = i
         pl = lens[min(list(lens.keys()))]
-        return pl.rect.centerx, pl.rect.centery
+        return pl.rect
 
     def check_pos_by_emptbot(self, pref_side):
+        """С помощью 'пустого бота' (имеет только rect и mask) мы проверяем,
+         можем ли заехать на определенную клетку"""
         speeds = {'r': [self.speed, 0], 'l': [-self.speed, 0],
                   't': [0, -self.speed], 'b': [0, self.speed]}
         empty_b = EmptyBot(self.rect.x, self.rect.y,
                            self.rect.width, self.rect.height)
         empty_b.rect = empty_b.rect.move(speeds[pref_side])
         if pygame.sprite.spritecollide(empty_b, self.game.wall_group, False,
-                                        pygame.sprite.collide_mask):
+                                       pygame.sprite.collide_mask):
             return False
         return True
 
     def check_side(self, pref_side):
+        """Функция, которая узнает может ли бот проехать в позицию pref_side,
+         т.е в том направлении, в котором расположен игрок.
+         Но если мы однажды не смогли проехать в том направлении
+          (об этом мы узнаем из поля side_flags,
+          где показывается в какую сторону мы не смогли проехать)
+         То мы едем и смотрим можем ли проехать в позицию prev_side
+         (т.е та, в которую ехали раньше)
+            Допустим pref_side = 'b'
+                     prev_side = 'b'
+                     side = 'l
+                Т.е мы едем влево, но хотим ехать вниз, то при каждом
+                передвижении мы проверяем можем ли мы проехать вниз,
+                и если можем, то изменяем side и prev_side, т.е поворачиваем"""
         anti_side = {'r': 'l', 'l': 'r', 't': 'b', 'b': 't'}
         if self.check_pos_by_emptbot(pref_side):
             if self.sides_flags[self.available_side.index(pref_side)]:
@@ -397,9 +455,9 @@ class Bot(pygame.sprite.Sprite):
                 self.change_side(custom=True)
                 self.start_time = now
 
-        def go_to(target_pos):
+        def go_to(target_rect):
             # Узнаем сторону, в которую нам предпочтительно ехать
-            pref_side = self.get_preferred_side(target_pos)
+            pref_side = self.get_preferred_side(target_rect)
             # Если стороны нет (т.е мы приехали, то останавливаемся)
             if pref_side is None:
                 return
@@ -412,14 +470,15 @@ class Bot(pygame.sprite.Sprite):
             self.set_speedxy()
             rez = self.move_collide(self.side, [self.speedx, self.speedy])
             if rez is not None and not rez[0]:
-                if rez[1] is not None and rez[1].isBroken and \
-                        random() < 1 / 3:
+                if rez[1] is not None and\
+                        rez[1].__class__.__name__ == 'Wall' and\
+                        rez[1].isBroken and random() < 1 / 3:
                     self.shoot(custom=True)
                     return
                 else:
                     self.sides_flags[
                         self.available_side.index(self.side)] = True
-                    self.breaking_deadlock(target_pos)
+                    self.breaking_deadlock()
             else:
                 self.sides_flags[self.available_side.index(self.side)] = False
 
@@ -427,16 +486,12 @@ class Bot(pygame.sprite.Sprite):
             just_drive()
         if self.target == 'players':
             # Узнаем позицию цели
-            players_pos = self.get_nearest_players_pos()
-            go_to(players_pos)
+            players_rect = self.get_nearest_players_pos()
+            go_to(players_rect)
 
         if self.target == 'eagle':
             rect = self.game.eagle.rect
-            go_to((rect.centerx, rect.centery))
-
-    def update(self):
-        self.move()
-        self.shoot()
+            go_to(rect)
 
     def shoot(self, custom=False):
         now = pygame.time.get_ticks()
@@ -449,7 +504,8 @@ class Bot(pygame.sprite.Sprite):
                     self.bullet = bullet
 
     def compare_rect(self):
-        """Сравнивает координаты и при равестве стреляет"""
+        """Сравнивает координаты с орлом и игроком.
+        При равестве стреляет"""
         for i in self.game.player_group:
             if i.compare_rect_with_bot(self.rect):
                 return True
@@ -457,10 +513,25 @@ class Bot(pygame.sprite.Sprite):
             return True
         return False
 
-    def get_preferred_side(self, players_pos):
-        p_x, p_y = players_pos
+    def get_preferred_side(self, players_rect):
+        """Функция, которая в зависимости от расположения
+         игрока к боту определяет сторону, в которую необходимо ехать боту"""
+        # TODO доп.комментарии
+        p_x, p_y = players_rect.centerx, players_rect.centery
         b_x, b_y = self.rect.centerx, self.rect.centery
-        if p_x == b_x and b_y == p_y:
+        if (p_x == b_x and b_y == p_y) or \
+            (players_rect.left == self.rect.right and
+                (players_rect.top == self.rect.top or
+                    players_rect.bottom == self.rect.bottom)) or\
+            (players_rect.right == self.rect.left and
+                (players_rect.top == self.rect.top or
+                    players_rect.bottom == self.rect.bottom)) or \
+            (players_rect.top == self.rect.bottom and
+                (players_rect.left == self.rect.left or
+                    players_rect.right == self.rect.right)) or \
+            (players_rect.bottom == self.rect.top and
+                (players_rect.left == self.rect.left or
+                    players_rect.right == self.rect.right)):
             self.is_stop_y = False
             self.is_stop_x = False
             return None
@@ -487,10 +558,9 @@ class Bot(pygame.sprite.Sprite):
             return
         return None
 
-    def breaking_deadlock(self, pos):
+    def breaking_deadlock(self):
+        # TODO доп.комментарии
         anti_side = {'r': 'l', 'l': 'r', 't': 'b', 'b': 't'}
-        px, py = pos
-        x, y = self.rect.centerx, self.rect.centery
         if self.side == 'b':
             if self.prev_side in [anti_side[self.side], 'b']:
                 self.side = 'l' if random() < 1 / 2 else 'r'

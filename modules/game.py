@@ -1,7 +1,7 @@
 import pytmx
 import pygame
 import os
-from modules.sprites import Player, Bot, Eagle, Wall
+from modules.sprites import Player, Bot, Eagle, Wall, EmptyBot
 
 """
 Карта должна содержать минимум эти слои.
@@ -76,20 +76,32 @@ def convert_coords(x, tile_size):
 class BotManager:
     def __init__(self, game_obj):
         self.game = game_obj
+        # В зависимости от количества игроков на поле должно
+        # быть или 4 или 6 вражеских танков
         self.player_count = 1 if self.game.player1 is not None \
             else 2 if self.game.player2 is not None else 0
         if self.player_count == 0:
             raise Exception('Недостаточно игроков')
         from modules import mobs_count
+        """Загружаем шаблон, по которому будут спавниться боты"""
+        # TODO когда необходимого шаблона нет, то
+        #  необходимо или зациклить или написать генератор шаблона
         try:
-            self.bot_comb = mobs_count.count[self.game.level]
+            # self.bot_comb = mobs_count.count[self.game.level]
+            self.bot_comb = mobs_count.count[10]
         except KeyError:
             raise KeyError('Комбинация ботов не найдена')
 
+        # Определяем время респавна ботов
+        # (динамическое и зависит от уровня и количества игроков)
         self.respawn_time = (190 - self.game.level * 4 - (
                 self.player_count - 1) * 60) * 10
         self.start_time = -self.respawn_time
-
+        """В игре существует 3 временных периода когда:
+                1: боты просто катаются по карте и ничего не преследуют
+                2: боты едут к ближайшему игроку
+                3: боты едут к орлу
+                """
         self.period_timer = pygame.time.get_ticks()
         self.first_period = self.respawn_time // 8 * 20
         self.second_period = self.first_period * 2
@@ -103,10 +115,12 @@ class BotManager:
 
     def update(self, events=None):
         now = pygame.time.get_ticks()
+        # Определяем убиты ли все боты. Если убиты, то игрок выйграл
         if len(self.game.mobs_group) <= 0 and self.global_count_bots <= 0:
             self.game.isGameOver = True
             self.game.game_over()
-
+        # Если игра продолжается, то мы создаем бота в
+        # зависимости от времени респавна и количества ботов на карте
         if not self.game.isGameOver and \
                 now - self.start_time > self.respawn_time and \
                 len(self.game.mobs_group) < 4 and self.global_count_bots > 0:
@@ -115,6 +129,8 @@ class BotManager:
                 sum(self.bot_comb) - self.global_count_bots)
             self.start_time = now
 
+        # Проверяем на периоды и устанавливаем цели.
+        # Через сравнения достагается цикличность периодов
         if self.first_period < now - self.period_timer < self.second_period:
             self.setTarget_for_bots('players')
         elif self.second_period < now - self.period_timer \
@@ -122,27 +138,43 @@ class BotManager:
             self.setTarget_for_bots('eagle')  # eagle
         elif now - self.period_timer > self.third_period:
             self.setTarget_for_bots(None)  # None
+            # Этот таймер как раз таки и помогает реализовать цикличность
             self.period_timer = now
 
         self.game.mobs_group.update(events)
 
     def get_type_tank(self):
+        """Функция, отвечающая за подсчет и контроль
+        количества и типов танков
+        :return type_bot like t1 or t2 or t3 or t4"""
+        # Уменьшаем счетчик общего количества ботов
         self.global_count_bots -= 1
+        # Увеличиваем счетчик количества ботов определенного типа
         self.real_time_counter[0] += 1
+        # Когда количество ботов больше чем в шаблоне для данного
+        # уровня данного типа танка, мы изменяем тип и сбрасываем счетчик
         if self.real_time_counter[0] \
                 > self.bot_comb[self.types_tanks.index(self.real_time_counter[
                                                            1])]:
-            self.real_time_counter[0] = 0
+            self.real_time_counter[0] = 1
             self.real_time_counter[1] = self.types_tanks[
                 self.types_tanks.index(self.real_time_counter[1]) + 1]
-
+        # Возвращаем тип танка, который в данный момент должен появиться
         return self.real_time_counter[1]
 
     def get_tile(self):
         from random import choice
-        return choice(self.free_tiles_for_spawn)
+        # Рандомно выбираем место для спавна бота
+        while True:
+            tile = choice(self.free_tiles_for_spawn)
+            em = EmptyBot(tile[0], tile[1],
+                          self.game.TILE_SIZE, self.game.TILE_SIZE)
+            if not pygame.sprite.spritecollide(em,
+                                               self.game.all_sprites, False):
+                return tile
 
     def setTarget_for_bots(self, target):
+        # Устанавливаем цель для всех ботов
         for i in self.game.mobs_group:
             i.setTarget(target)
 
@@ -288,7 +320,7 @@ class Game:
         if self.eagle.isBroken:
             self.game_over()
         self.player_group.update(events)
-        self.bullets.update(events)
+        self.bullets.update()
         self.bot_manager.update(events)
 
     def render(self):
