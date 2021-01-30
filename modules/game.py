@@ -113,8 +113,13 @@ class BotManager:
         self.visible_bots = 4 if self.player_count == 1 else 6
         self.free_tiles_for_spawn = self.game.TILES_FOR_MOBS
 
+        self.bonus_timer = None
+        self.bonus_delay = None
+        self.bonus_name = None
+
     def update(self, events=None):
         now = pygame.time.get_ticks()
+        self.check_bonuses()
         # Определяем убиты ли все боты. Если убиты, то игрок выйграл
         if len(self.game.mobs_group) <= 0 and self.global_count_bots <= 0:
             self.game.isGameOver = True
@@ -134,12 +139,12 @@ class BotManager:
         # Проверяем на периоды и устанавливаем цели.
         # Через сравнения достагается цикличность периодов
         if self.first_period < now - self.period_timer < self.second_period:
-            self.setTarget_for_bots('players')
+            self.set_target_for_bots('players')
         elif self.second_period < now - self.period_timer \
                 < self.third_period:
-            self.setTarget_for_bots('eagle')  # eagle
+            self.set_target_for_bots('eagle')  # eagle
         elif now - self.period_timer > self.third_period:
-            self.setTarget_for_bots(None)  # None
+            self.set_target_for_bots(None)  # None
             # Этот таймер как раз таки и помогает реализовать цикличность
             self.period_timer = now
 
@@ -180,10 +185,33 @@ class BotManager:
             return tile
         return False
 
-    def setTarget_for_bots(self, target):
+    def set_target_for_bots(self, target):
         # Устанавливаем цель для всех ботов
         for i in self.game.mobs_group:
-            i.setTarget(target)
+            i.set_target(target)
+
+    def activate_bonus(self, name_bonus):
+        # name_bonus = 'c' - clock, 'g'
+        if name_bonus == 'c':
+            for i in self.game.mobs_group:
+                i.isFreeze = True
+            self.bonus_timer = pygame.time.get_ticks()
+            self.bonus_delay = 6000
+            self.bonus_name = name_bonus
+        if name_bonus == 'g':
+            for i in self.game.mobs_group:
+                i.kill()
+
+    def check_bonuses(self):
+        now = pygame.time.get_ticks()
+        if self.bonus_timer is not None:
+            if now - self.bonus_timer > self.bonus_delay:
+                self.bonus_timer = None
+                self.bonus_delay = None
+                if self.bonus_name == 'c':
+                    for i in self.game.mobs_group:
+                        i.isFreeze = False
+                    self.bonus_name = None
 
 
 class Map:
@@ -234,7 +262,7 @@ class Map:
                         self.map.get_tile_locations_by_gid(
             list(self.map.tiledgidmap.values()).index(id) + 1)))
 
-    def render_layer(self, screen, layer_name: str):
+    def render_layer(self, sc, layer_name: str):
         """Отрисовка на screen необходимых слоев"""
         # Узнаем имеется ли желаемый слой в списке доступных
         if layer_name not in self.layers:
@@ -245,7 +273,7 @@ class Map:
                 # По координате и номеру слоя отрисовываем тайл
                 image = self.get_tile_image(x, y, layer)
                 if image is not None:
-                    screen.blit(image, (
+                    sc.blit(image, (
                         x * self.TILE_SIZE + OFFSET,
                         y * self.TILE_SIZE + OFFSET))
 
@@ -270,6 +298,7 @@ class Game:
         self.map = Map(f'{MAPDIR}map{number_level}.tmx', MAP_SIZE)
         self.map_object = self.map.map
         self.TILE_SIZE = self.map.TILE_SIZE
+        self.MAP_SIZE = [OFFSET, OFFSET, MAP_SIZE + OFFSET, MAP_SIZE + OFFSET]
         self.type_game = type_game
         self.level = number_level
 
@@ -279,12 +308,14 @@ class Game:
         self.mobs_group = pygame.sprite.Group()
         self.player_group = pygame.sprite.Group()
         self.wall_group = pygame.sprite.Group()
-        self.bullets = pygame.sprite.Group()
         self.map_group = pygame.sprite.Group()
-        self.eagle = self.createEagle()
+
+        self.bullets = pygame.sprite.Group()
+        self.bonus_group = pygame.sprite.Group()
+        self.eagle = self.create_eagle()
 
         # Создаем спрайты стен
-        self.createWalls()
+        self.create_walls()
 
         # для игроков ДОЛЖНО быть минимум и максимум 2
         # доступные клетки для спавна (В ДАННЫЙ МОМЕНТ УЧИТЫВАЕТСЯ
@@ -307,7 +338,7 @@ class Game:
             raise Exception('Неверный тип игры')
         self.bot_manager = BotManager(self)
 
-    def createWalls(self):
+    def create_walls(self):
         if not self.map.check_('walls'):
             return
         for i in self.map.get_objects('walls'):
@@ -315,7 +346,7 @@ class Game:
             wall = Wall(x, y, self.map.get_tile_id(i.gid), self.TILE_SIZE)
             wall.add(self.all_sprites, self.wall_group, self.map_group)
 
-    def createEagle(self):
+    def create_eagle(self):
         tile = self.map.get_objects('eagle')[0]
         x, y = tile.x / self.map.koeff + OFFSET, tile.y / self.map.koeff + OFFSET
         return Eagle(self, x, y, self.TILE_SIZE)
@@ -325,6 +356,8 @@ class Game:
             self.game_over()
         self.player_group.update(events)
         self.bullets.update()
+        self.bonus_group.update()
+        self.wall_group.update()
         self.bot_manager.update(events)
 
     def render(self):
@@ -340,6 +373,7 @@ class Game:
         self.map.render_layer(screen, 'ground')
         # render player and bullet and mobs
         self.all_sprites.draw(screen)
+        self.bonus_group.draw(screen)
         # Отрисовка деревьев
         self.map.render_layer(screen, 'trees')
 
@@ -354,7 +388,7 @@ fullscreen = False
 if __name__ == '__main__':
     clock = pygame.time.Clock()
     running = True
-    game = Game(1, 5)
+    game = Game(1, 1)
     while running:
         screen.fill(pygame.Color('black'))
         for event in pygame.event.get():

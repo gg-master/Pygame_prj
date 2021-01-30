@@ -1,6 +1,6 @@
 import pygame
 from settings import *
-from random import random
+from random import random, choice, randrange
 from default_funcs import load_image
 
 DIR_FOR_TANKS_IMG = 'tanks_texture\\'
@@ -31,6 +31,20 @@ class Player(pygame.sprite.Sprite):
         self.side = 't'
         self.move_trigger = False
 
+        self.speed = 2
+        self.lives = 3
+        self.hidden = False
+        self.hide_timer = pygame.time.get_ticks()
+
+        self.bullet = None
+        self.bullet_speed = 5
+        self.shoot_delay = 200
+        self.last_shot = pygame.time.get_ticks()
+
+        self.bonuses_timers = {}
+
+        self.set_properties()
+
         self.TILE_SIZE = tile_size
         self.image = None
         self.mask = None
@@ -41,32 +55,31 @@ class Player(pygame.sprite.Sprite):
         self.rect.x = self.coords[0]
         self.rect.y = self.coords[1]
 
-        self.speed = 2
-        self.lives = 3
-        self.hidden = False
-        self.hide_timer = pygame.time.get_ticks()
-        self.bullet = None
-
-        self.shoot_delay = 200
-        self.last_shot = pygame.time.get_ticks()
+    def activate_bonus(self, name_bonus):
+        # name_bonus = 's' - star, 'h' - helmet, 't' - tank, 'p' - pistol
+        if name_bonus == 's':
+            self.type_tanks = f't{min(4, int(self.type_tanks[1]) + 1)}'
+            self.set_properties()
+        elif name_bonus == 't':
+            self.lives = min(3, self.lives + 1)
+        elif name_bonus == 'h':
+            pass
+        elif name_bonus == 'p':
+            pass
 
     def set_properties(self):
         if self.type_tanks == 't1':
-            self.speed = 1
+            self.speed = 2
         elif self.type_tanks == 't2':
             self.speed = 3
         elif self.type_tanks == 't3':
-            self.shoot_delay = 100
-        elif self.type_tanks == 't4':
-            self.lives = 4
+            self.bullet_speed = 7
 
     def load_tanks_image(self):
         self.move_trigger = not self.move_trigger
+        name_img = f"{self.player}_{self.side}{int(self.move_trigger)}"
         image = load_image(f'{DIR_FOR_TANKS_IMG}{self.type_tanks}\\'
-                           f'{self.images[f"{self.player}_{self.side}{int(self.move_trigger)}"]}'
-                           if self.player == 1 else
-                           f'{DIR_FOR_TANKS_IMG}{self.type_tanks}\\'
-                           f'{self.images[f"{self.player}_{self.side}{int(self.move_trigger)}"]}')
+                           f'{self.images[name_img]}')
         self.image = pygame.transform.scale(image, (self.TILE_SIZE -
                                                     self.TILE_SIZE // 8,
                                                     self.TILE_SIZE -
@@ -88,6 +101,8 @@ class Player(pygame.sprite.Sprite):
         self.rect = self.rect.move(speed[0], speed[1])
         c = pygame.sprite.spritecollide(self, self.game.map_group, False,
                                         pygame.sprite.collide_mask)
+        c_b = pygame.sprite.spritecollideany(self, self.game.bonus_group)
+        c_b.activate_bonus(self) if c_b else ''
         del c[c.index(self)]
         # TODO обработка столкновений с другими игроками и тд
         """За обработку столкновений с пулями отвечает сама пуля"""
@@ -125,7 +140,7 @@ class Player(pygame.sprite.Sprite):
         if now - self.last_shot > self.shoot_delay:
             self.last_shot = now
             if self.bullet is None or not self.bullet.alive():
-                bullet = Bullet(self.rect, self.side, self.game, self)
+                bullet = Bullet(self.rect, self.side, self.game, self, speed=self.bullet_speed)
                 bullet.add(self.game.all_sprites, self.game.bullets)
                 self.bullet = bullet
 
@@ -254,6 +269,7 @@ class Bot(pygame.sprite.Sprite):
         self.bonus_trigger_timer = pygame.time.get_ticks()
         self.trigger_image = 3
 
+        self.isFreeze = False
         self.speed = 2
         self.speedx = 0
         self.speedy = 0
@@ -285,18 +301,21 @@ class Bot(pygame.sprite.Sprite):
         self.rect.y = self.coords[1]
 
     def update(self, *event):
-        self.move()
-        self.shoot()
+        if not self.isFreeze:
+            self.move()
+            self.shoot()
 
     def kill(self):
         if self.lives > 1:
             self.lives -= 1
             return
         if self.is_bonus:
-            pass
+            Bonus(self.game)
         super().kill()
 
     def set_properties(self):
+        self.isFreeze = False if\
+            self.game.bot_manager.bonus_delay is None else True
         if self.number in [4, 11, 18]:
             self.is_bonus = True
         if self.type_tanks == 't1':
@@ -311,7 +330,7 @@ class Bot(pygame.sprite.Sprite):
             self.lives = 4
             self.points = 400
 
-    def setTarget(self, target):
+    def set_target(self, target):
         self.target = target
 
     def hide(self):
@@ -682,6 +701,21 @@ class Eagle(pygame.sprite.Sprite):
             return True
         return False
 
+    def activate_bonus(self, name_bonus):
+        if name_bonus == 'sh':
+            for kx, ky in [[-1, -1], [0, -1], [1, -1], [1, 0], [1, 1],
+                           [0, 1], [-1, 1], [-1, 0]]:
+                x, y = self.rect.x + (kx * self.TILE_SIZE),\
+                       self.rect.y + (ky * self.TILE_SIZE)
+                print(x, y)
+                empty_b = EmptyBot(x, y, self.TILE_SIZE, self.TILE_SIZE)
+                c = pygame.sprite.spritecollideany(empty_b,
+                                                   self.game.wall_group)
+                print(c)
+                if c:
+                    if c.isBroken:
+                        c.set_bonus(name_bonus)
+
 
 class Wall(pygame.sprite.Sprite):
     type_wall = {
@@ -711,14 +745,30 @@ class Wall(pygame.sprite.Sprite):
 
         self.tile_size = tile_size
         self.image = self.mask = self.id = None
+        self.blink_img = pygame.transform.scale(load_image(
+            f'{WORLDIMG_DIR}{self.type_wall[11]}'),
+            (self.tile_size, self.tile_size))
         self.reload_mask(id)
         self.rect = self.image.get_rect()
 
         self.rect.x = x
         self.rect.y = y
 
+        self.bonus_name = self.bonus_timer = self.bonus_delay = \
+            self.blink_time = self.blink_timer = None
+
+    def set_bonus(self, name_bonus):
+        if name_bonus == 'sh':
+            self.bonus_name = name_bonus
+            self.bonus_timer = pygame.time.get_ticks()
+            self.bonus_delay = 20000
+            self.blink_time = self.bonus_delay * 1 / 5
+            self.reload_mask(13)
+
     def reload_mask(self, set_id):
         self.id = set_id
+        self.isBroken = True if self.id not in [2, 13] else False
+        self.isWall = True if self.id not in [2] else False
         self.image = load_image(f'{WORLDIMG_DIR}{self.type_wall[self.id]}')
         self.image = pygame.transform.scale(self.image,
                                             (self.tile_size, self.tile_size))
@@ -843,7 +893,79 @@ class Wall(pygame.sprite.Sprite):
         else:
             self.kill()
 
+    def update(self, *args):
+        if self.bonus_name is not None:
+            now = pygame.time.get_ticks()
+            if now - self.bonus_timer > self.bonus_delay:
+                self.bonus_name = None
+                self.reload_mask(11)
+                return
+            if now - self.bonus_timer > self.bonus_delay - self.blink_time:
+                if self.blink_timer is None:
+                    self.blink_timer = now - self.blink_time
+                if now - self.blink_timer > 180:
+                    img = self.image
+                    self.image = self.blink_img
+                    self.blink_img = img
+                    self.blink_timer = now
+                    return
+
 
 class Bonus(pygame.sprite.Sprite):
-    def __init__(self):
-        pass
+    images = {
+        's': 'star.png', 'c': 'clock.png', 'g': 'grenade.png',
+        'h': 'helmet.png', 'p': 'pistol.png', 'sh': 'shovel.png',
+        't': 'tank.png'
+    }
+
+    def __init__(self, game):
+        super().__init__(game.all_sprites, game.bonus_group)
+        available_bonuses = ['s', 's', 'g', 'g', 'c', 'h', 'p', 'sh', 't']
+        self.game = game
+        self.bonus = choice(available_bonuses)
+        # self.bonus = 'sh'
+        self.image = load_image(f"{DIR_FOR_TANKS_IMG}"
+                                f"bonus\\{self.images[self.bonus]}")
+
+        k = ((3 * self.game.TILE_SIZE) // 4) // self.image.get_rect().width
+        self.image = pygame.transform.scale(self.image,
+                                            (self.image.get_rect().width * k,
+                                             self.image.get_rect().height * k))
+        self.mask = pygame.mask.from_surface(self.image)
+        self.rect = self.image.get_rect()
+        self.hide_image = pygame.Surface((self.rect.width, self.rect.height),
+                                         pygame.SRCALPHA, 32)
+        self.rect.center = [randrange(self.game.MAP_SIZE[0] +
+                                      self.game.TILE_SIZE * 2,
+                                      self.game.MAP_SIZE[2] -
+                                      self.game.TILE_SIZE * 2),
+                            randrange(self.game.MAP_SIZE[1] +
+                                      self.game.TILE_SIZE * 2,
+                                      self.game.MAP_SIZE[3] -
+                                      self.game.TILE_SIZE * 2)]
+
+        self.hide_timer = pygame.time.get_ticks()
+        self.spawn_timer = pygame.time.get_ticks()
+        self.spawn_delay = 10000
+        self.blink_time = 2000
+
+    def update(self, *args):
+        now = pygame.time.get_ticks()
+        if now - self.spawn_timer > self.spawn_delay:
+            self.kill()
+        if now - self.spawn_timer > self.spawn_delay - self.blink_time:
+            if now - self.hide_timer > 180:
+                img = self.image
+                self.image = self.hide_image
+                self.hide_image = img
+                self.hide_timer = now
+                return
+
+    def activate_bonus(self, player):
+        if self.bonus in ['t', 's', 'h', 'p']:
+            player.activate_bonus(self.bonus)
+        elif self.bonus in ['c', 'g']:
+            self.game.bot_manager.activate_bonus(self.bonus)
+        elif self.bonus in ['sh']:
+            self.game.eagle.activate_bonus(self.bonus)
+        self.kill()
