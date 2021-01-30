@@ -227,6 +227,14 @@ class Bot(pygame.sprite.Sprite):
         'b00': 't_r_b.png',
         't11': 't_r1.png', 'l11': 't_r1_l.png', 'r11': 't_r1_r.png',
         'b11': 't_r1_b.png',
+        't0_4': 't_g.png', 'l0_4': 't_g_l.png', 'r0_4': 't_g_r.png',
+        'b0_4': 't_g_b.png',
+        't1_4': 't_g1.png', 'l1_4': 't_g1_l.png', 'r1_4': 't_g1_r.png',
+        'b1_4': 't_g1_b.png',
+        't0_3': 't_y.png', 'l0_3': 't_y_l.png', 'r0_3': 't_y_r.png',
+        'b0_3': 't_y_b.png',
+        't1_3': 't_y1.png', 'l1_3': 't_y1_l.png', 'r1_3': 't_y1_r.png',
+        'b1_3': 't_y1_b.png'
     }
 
     def __init__(self, game, coords, tile_size, type_bot: str, number_tank):
@@ -244,6 +252,28 @@ class Bot(pygame.sprite.Sprite):
         self.move_trigger = self.is_bonus = self.bonus_trigger = False
         self.bonus_trigger_delay = 300
         self.bonus_trigger_timer = pygame.time.get_ticks()
+        self.trigger_image = 3
+
+        self.speed = 2
+        self.speedx = 0
+        self.speedy = 0
+        self.lives = 1
+        self.hidden = False
+        self.hide_timer = pygame.time.get_ticks()
+
+        self.can_shoot = True
+        self.bullet = None
+        self.bullet_speed = 5
+        self.shoot_delay = 300
+        self.last_shot = pygame.time.get_ticks()
+
+        self.start_time = pygame.time.get_ticks()
+        self.change_side_timer = 2000
+
+        self.target = None
+        self.points = 100
+
+        self.set_properties()
 
         self.TILE_SIZE = tile_size
         self.image = self.mask = None
@@ -254,25 +284,6 @@ class Bot(pygame.sprite.Sprite):
         self.rect.x = self.coords[0]
         self.rect.y = self.coords[1]
 
-        self.speed = 2
-        self.speedx = 0
-        self.speedy = 0
-        self.lives = 1
-        self.hidden = False
-        self.hide_timer = pygame.time.get_ticks()
-
-        self.bullet = None
-        self.bullet_speed = 5
-        self.shoot_delay = 300
-        self.last_shot = pygame.time.get_ticks()
-
-        self.start_time = pygame.time.get_ticks()
-        self.change_side_timer = 2000
-
-        self.target = None
-
-        self.set_properties()
-
     def update(self, *event):
         self.move()
         self.shoot()
@@ -280,9 +291,9 @@ class Bot(pygame.sprite.Sprite):
     def kill(self):
         if self.lives > 1:
             self.lives -= 1
-            # TODO при уменьшении жизней у бота (самый крупный)
-            #  необходимо изменить его внешний вид
             return
+        if self.is_bonus:
+            pass
         super().kill()
 
     def set_properties(self):
@@ -292,10 +303,13 @@ class Bot(pygame.sprite.Sprite):
             self.speed = 1
         elif self.type_tanks == 't2':
             self.speed = 3
+            self.points = 200
         elif self.type_tanks == 't3':
-            self.shoot_delay = 100
+            self.bullet_speed = 7
+            self.points = 300
         elif self.type_tanks == 't4':
             self.lives = 4
+            self.points = 400
 
     def setTarget(self, target):
         self.target = target
@@ -306,20 +320,29 @@ class Bot(pygame.sprite.Sprite):
         self.hide_timer = pygame.time.get_ticks()
         # self.rect.center = (WIDTH / 2, HEIGHT + 200)
 
+    def get_image_name(self):
+        now = pygame.time.get_ticks()
+        name = f"{self.side}{int(self.move_trigger)}"
+        if 2 < self.lives <= 4:
+            name = f'{self.side}{int(self.move_trigger)}_{self.lives}'
+        elif self.lives == 2:
+            name = f"{self.side}{int(self.move_trigger)}_{self.trigger_image}"
+        """Если у нас танк является бонусным, то он должен мигать"""
+        if now - self.bonus_trigger_timer > self.bonus_trigger_delay and \
+                self.is_bonus:
+            if now - self.bonus_trigger_timer > self.bonus_trigger_delay * 2:
+                self.bonus_trigger_timer = now
+            name = f"{self.side}{int(self.move_trigger)}" \
+                f"{int(self.move_trigger)}"
+        return name
+
     def load_tanks_image(self):
         self.move_trigger = not self.move_trigger
         if self.is_bonus:
             self.bonus_trigger = not self.bonus_trigger
-        now = pygame.time.get_ticks()
-        req = f"{self.side}{int(self.move_trigger)}"
-        """Если у нас танк является бонусным, то он должен мигать"""
-        if now - self.bonus_trigger_timer > self.bonus_trigger_delay and\
-                self.is_bonus:
-            if now - self.bonus_trigger_timer > self.bonus_trigger_delay * 2:
-                self.bonus_trigger_timer = now
-            req = f"{self.side}{int(self.move_trigger)}" \
-                f"{int(self.move_trigger)}"
-        name_image = self.images[req]
+        self.trigger_image = 4 if self.trigger_image == 3 else 3
+
+        name_image = self.images[self.get_image_name()]
         image = load_image(f'{DIR_FOR_TANKS_IMG}{self.type_tanks}\\'
                            f'{name_image}')
         self.image = pygame.transform.scale(image, (self.TILE_SIZE -
@@ -403,7 +426,7 @@ class Bot(pygame.sprite.Sprite):
                            self.rect.width, self.rect.height)
         empty_b.rect = empty_b.rect.move(speeds[pref_side])
         c = pygame.sprite.spritecollide(empty_b, self.game.map_group, False,
-                                       pygame.sprite.collide_mask)
+                                        pygame.sprite.collide_mask)
         del c[c.index(self)]
         if c:
             return False
@@ -508,9 +531,11 @@ class Bot(pygame.sprite.Sprite):
         now = pygame.time.get_ticks()
         if now - self.last_shot > self.shoot_delay:
             self.last_shot = now
-            if self.bullet is None or not self.bullet.alive():
+            if self.can_shoot and (self.bullet is None or
+                                   not self.bullet.alive()):
                 if random() < 1 / 10 or self.compare_rect() or custom:
-                    bullet = Bullet(self.rect, self.side, self.game, self)
+                    bullet = Bullet(self.rect, self.side, self.game, self,
+                                    speed=self.bullet_speed)
                     bullet.add(self.game.all_sprites, self.game.bullets)
                     self.bullet = bullet
 
@@ -817,3 +842,8 @@ class Wall(pygame.sprite.Sprite):
                 self.reload_mask(20)
         else:
             self.kill()
+
+
+class Bonus(pygame.sprite.Sprite):
+    def __init__(self):
+        pass

@@ -98,18 +98,18 @@ class BotManager:
                 self.player_count - 1) * 60) * 10
         self.start_time = -self.respawn_time
         """В игре существует 3 временных периода когда:
-                1: боты просто катаются по карте и ничего не преследуют
-                2: боты едут к ближайшему игроку
-                3: боты едут к орлу
-                """
+        1: боты просто катаются по карте и ничего не преследуют
+        2: боты едут к ближайшему игроку
+        3: боты едут к орлу
+        """
         self.period_timer = pygame.time.get_ticks()
         self.first_period = self.respawn_time // 8 * 20
         self.second_period = self.first_period * 2
         self.third_period = 2560 + self.second_period
 
         self.global_count_bots = sum(self.bot_comb)
-        self.real_time_counter = [0, 't1']
         self.types_tanks = ['t1', 't2', 't3', 't4']
+        self.real_time_counter = [0, self.get_type()]
         self.visible_bots = 4 if self.player_count == 1 else 6
         self.free_tiles_for_spawn = self.game.TILES_FOR_MOBS
 
@@ -124,10 +124,10 @@ class BotManager:
         if not self.game.isGameOver and \
                 now - self.start_time > self.respawn_time and \
                 len(self.game.mobs_group) < 4 and self.global_count_bots > 0:
-            type_t = self.get_type_tank()
-            if type_t:
-                Bot(self.game, self.get_tile(),
-                    self.game.TILE_SIZE, type_t,
+            tile = self.get_tile()
+            if tile:
+                Bot(self.game, tile,
+                    self.game.TILE_SIZE, self.get_type_tank(),
                     sum(self.bot_comb) - self.global_count_bots)
                 self.start_time = now
 
@@ -144,6 +144,11 @@ class BotManager:
             self.period_timer = now
 
         self.game.mobs_group.update(events)
+
+    def get_type(self):
+        for i in range(len(self.bot_comb)):
+            if self.bot_comb[i]:
+                return self.types_tanks[i]
 
     def get_type_tank(self):
         """Функция, отвечающая за подсчет и контроль
