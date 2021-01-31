@@ -309,6 +309,7 @@ class Game:
         self.player_group = pygame.sprite.Group()
         self.wall_group = pygame.sprite.Group()
         self.map_group = pygame.sprite.Group()
+        self.animation_sprite = pygame.sprite.Group()
 
         self.bullets = pygame.sprite.Group()
         self.bonus_group = pygame.sprite.Group()
@@ -359,6 +360,7 @@ class Game:
         self.bonus_group.update()
         self.wall_group.update()
         self.bot_manager.update(events)
+        self.animation_sprite.update()
 
     def render(self):
         # Отрисовка по слоям.
@@ -374,6 +376,7 @@ class Game:
         # render player and bullet and mobs
         self.all_sprites.draw(screen)
         self.bonus_group.draw(screen)
+        self.animation_sprite.draw(screen)
         # Отрисовка деревьев
         self.map.render_layer(screen, 'trees')
 

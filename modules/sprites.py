@@ -41,12 +41,14 @@ class Player(pygame.sprite.Sprite):
         self.shoot_delay = 200
         self.last_shot = pygame.time.get_ticks()
 
-        self.bonuses_timers = {}
-
+        self.with_shield = True
+        self.spawn_stopper = True
+        self.f_sp_st = True
         self.set_properties()
 
         self.TILE_SIZE = tile_size
         self.image = None
+
         self.mask = None
         self.load_tanks_image()
 
@@ -54,6 +56,11 @@ class Player(pygame.sprite.Sprite):
         self.rect = self.image.get_rect()
         self.rect.x = self.coords[0]
         self.rect.y = self.coords[1]
+        self.none_image = pygame.Surface((self.rect.width, self.rect.height),
+                                         pygame.SRCALPHA, 32)
+        self.orig_image = self.image.copy()
+        Shield(self)
+        SpawnAnim(self)
 
     def activate_bonus(self, name_bonus):
         # name_bonus = 's' - star, 'h' - helmet, 't' - tank, 'p' - pistol
@@ -61,9 +68,10 @@ class Player(pygame.sprite.Sprite):
             self.type_tanks = f't{min(4, int(self.type_tanks[1]) + 1)}'
             self.set_properties()
         elif name_bonus == 't':
-            self.lives = min(3, self.lives + 1)
+            self.lives += 1
         elif name_bonus == 'h':
-            pass
+            self.with_shield = True
+            Shield(self)
         elif name_bonus == 'p':
             pass
 
@@ -95,6 +103,13 @@ class Player(pygame.sprite.Sprite):
         self.hide_timer = pygame.time.get_ticks()
         # self.rect.center = (WIDTH / 2, HEIGHT + 200)
 
+    def kill(self):
+        if self.with_shield:
+            return
+        else:
+            # TODO уменьшение жизки
+            pass
+
     def move_collide(self, side: str, speed=(0, 0)):
         self.side = side
         self.load_tanks_image()
@@ -120,6 +135,12 @@ class Player(pygame.sprite.Sprite):
             self.move_collide('r', (self.speed, 0))
 
     def update(self, *args):
+        if self.spawn_stopper:
+            self.image = self.none_image
+            return
+        elif not self.spawn_stopper and self.f_sp_st:
+            self.image = self.orig_image
+            self.f_sp_st = False
         if self.hidden and pygame.time.get_ticks() - self.hide_timer > 1000:
             self.hidden = False
             self.rect.centerx = WIDTH / 2
@@ -205,6 +226,10 @@ class Bullet(pygame.sprite.Sprite):
                 c.eagle_break()
                 self.kill()
 
+    def kill(self):
+        Explosion(self)
+        super().kill()
+
     def set_rect(self, rect_tank):
         if self.side == 't':
             self.rect.bottom = rect_tank.top
@@ -270,6 +295,8 @@ class Bot(pygame.sprite.Sprite):
         self.trigger_image = 3
 
         self.isFreeze = False
+        self.spawn_stopper = True
+        self.f_sp_st = True
         self.speed = 2
         self.speedx = 0
         self.speedy = 0
@@ -299,9 +326,20 @@ class Bot(pygame.sprite.Sprite):
         self.rect = self.image.get_rect()
         self.rect.x = self.coords[0]
         self.rect.y = self.coords[1]
+        self.none_image = pygame.Surface((self.rect.width, self.rect.height),
+                                         pygame.SRCALPHA, 32)
+        self.orig_image = self.image.copy()
+
+        SpawnAnim(self)
 
     def update(self, *event):
-        if not self.isFreeze:
+        if self.spawn_stopper:
+            self.image = self.none_image
+            return
+        elif not self.spawn_stopper and self.f_sp_st:
+            self.image = self.orig_image
+            self.f_sp_st = False
+        if not self.isFreeze and not self.spawn_stopper:
             self.move()
             self.shoot()
 
@@ -311,6 +349,7 @@ class Bot(pygame.sprite.Sprite):
             return
         if self.is_bonus:
             Bonus(self.game)
+        Explosion(self)
         super().kill()
 
     def set_properties(self):
@@ -923,7 +962,7 @@ class Bonus(pygame.sprite.Sprite):
         available_bonuses = ['s', 's', 'g', 'g', 'c', 'h', 'p', 'sh', 't']
         self.game = game
         self.bonus = choice(available_bonuses)
-        # self.bonus = 'sh'
+        # self.bonus = 'h'
         self.image = load_image(f"{DIR_FOR_TANKS_IMG}"
                                 f"bonus\\{self.images[self.bonus]}")
 
@@ -969,3 +1008,130 @@ class Bonus(pygame.sprite.Sprite):
         elif self.bonus in ['sh']:
             self.game.eagle.activate_bonus(self.bonus)
         self.kill()
+
+
+class Shield(pygame.sprite.Sprite):
+    shield_anim = {0: 's1.png', 1: 's2.png'}
+
+    def __init__(self, player):
+        super().__init__(player.game.all_sprites, player.game.animation_sprite)
+        self.player = player
+        self.shield_n = 0
+        self.shield_timer = None
+        self.last_update = pygame.time.get_ticks()
+        self.shield_duration = 6000
+        self.frame_rate = 50
+        self.rect = self.player.rect.copy()
+        self.image = pygame.Surface((self.rect.width, self.rect.height),
+                                    pygame.SRCALPHA, 32)
+        self.offset = 3
+
+    def load_image(self):
+        self.shield_n = 0 if self.shield_n == 1 else 1
+        shield_image = load_image(
+            f'{DIR_FOR_TANKS_IMG}\\'
+            f'anim\\shield_anim\\'
+            f'{self.shield_anim[self.shield_n]}')
+        self.image = pygame.transform.scale(
+            shield_image, (self.rect.width + self.offset * 2,
+                           self.rect.height + self.offset * 2))
+        self.rect = self.player.rect.copy()
+        self.rect.x -= self.offset
+        self.rect.y -= self.offset
+
+    def update(self, *args):
+        if not self.player.spawn_stopper:
+            now = pygame.time.get_ticks()
+            self.shield_timer = now if self.shield_timer is None\
+                else self.shield_timer
+            if now - self.shield_timer > self.shield_duration:
+                self.player.with_shield = False
+                self.kill()
+            else:
+                if now - self.last_update > self.frame_rate:
+                    self.last_update = now
+                    self.load_image()
+
+
+class SpawnAnim(pygame.sprite.Sprite):
+    anim_img = {0: 'b1.png', 1: 'b2.png', 2: 'b3.png', 3: 'b4.png'}
+
+    def __init__(self, tank):
+        super().__init__(tank.game.all_sprites, tank.game.animation_sprite)
+        self.tank = tank
+        self.anim_n = 0
+        self.timer = pygame.time.get_ticks()
+        self.last_update = pygame.time.get_ticks()
+        self.duration = 1300
+        self.frame_rate = 50
+        self.rect = self.tank.rect.copy()
+        self.image = None
+        self.k = 1
+        self.load_image()
+
+    def load_image(self):
+        self.anim_n += self.k
+        if self.anim_n <= 0 or self.anim_n >= 3:
+            self.k *= -1
+        image = load_image(
+            f'{DIR_FOR_TANKS_IMG}\\'
+            f'anim\\spawn\\'
+            f'{self.anim_img[self.anim_n]}')
+        self.image = pygame.transform.scale(
+            image, (self.rect.width, self.rect.height))
+        self.rect = self.tank.rect.copy()
+        self.rect.center = self.tank.rect.center
+
+    def update(self, *args):
+        now = pygame.time.get_ticks()
+        if now - self.timer > self.duration:
+            self.tank.spawn_stopper = False
+            self.kill()
+        else:
+            if now - self.last_update > self.frame_rate:
+                self.last_update = now
+                self.load_image()
+
+
+class Explosion(pygame.sprite.Sprite):
+    explosion = {0: 'b1.png', 1: 'b2.png', 2: 'b3.png',
+                 3: 'b4.png', 4: 'b5.png'}
+
+    def __init__(self, obj):
+        super().__init__(obj.game.all_sprites, obj.game.animation_sprite)
+        self.obj = obj
+        self.type_obj = obj.__class__.__name__
+        self.max_index = 3 if self.type_obj == 'Bullet' else 4
+        self.frame = 0
+        self.timer = pygame.time.get_ticks()
+        self.last_update = pygame.time.get_ticks()
+        self.frame_rate = 50
+        self.k = self.obj.game.TILE_SIZE * (1 / 45)
+        self.rect = self.obj.rect.copy()
+        self.image = None
+        self.load_image()
+
+    def load_image(self):
+        image = load_image(
+            f'{DIR_FOR_TANKS_IMG}\\'
+            f'anim\\anim_\\'
+            f'{self.explosion[self.frame]}')
+        rect = image.get_rect()
+        image = pygame.transform.scale(
+            image, (int(rect.width * self.k), int(rect.height * self.k)))
+        image = pygame.transform.rotate(image,
+                                        choice([10, 30, 45, 60, 180, 90]))
+        self.image = image
+
+    def update(self, *args):
+        now = pygame.time.get_ticks()
+        if now - self.last_update > self.frame_rate:
+            self.last_update = now
+            if self.frame == self.max_index:
+                self.kill()
+            else:
+                center = self.rect.center
+                self.load_image()
+                self.rect = self.image.get_rect()
+                self.rect.center = center
+            self.frame += 1
