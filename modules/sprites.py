@@ -26,41 +26,44 @@ class Player(pygame.sprite.Sprite):
     def __init__(self, game, coords, tile_size, player):
         super().__init__(game.player_group, game.map_group, game.all_sprites)
         self.game = game
-        self.type_tanks = 't1'
-        self.player = player
         self.side = 't'
+        self.player = player
+        self.type_tanks = 't1'
         self.move_trigger = False
+
+        self.killed_enemies = {}
+        self.count_points = 0
 
         self.speed = 2
         self.lives = 3
-        self.hidden = False
-        self.hide_timer = pygame.time.get_ticks()
 
         self.bullet = None
         self.bullet_speed = 5
         self.shoot_delay = 200
         self.last_shot = pygame.time.get_ticks()
 
-        self.with_shield = True
-        self.spawn_stopper = True
-        self.f_sp_st = True
+        self.hidden = self.with_shield = self.spawn_stopper = False
         self.set_properties()
 
         self.TILE_SIZE = tile_size
-        self.image = None
-
-        self.mask = None
+        self.mask = self.image = None
         self.load_tanks_image()
 
         self.coords = coords
         self.rect = self.image.get_rect()
-        self.rect.x = self.coords[0]
-        self.rect.y = self.coords[1]
         self.none_image = pygame.Surface((self.rect.width, self.rect.height),
                                          pygame.SRCALPHA, 32)
         self.orig_image = self.image.copy()
+        self.spawn()
+
+    def spawn(self):
+        self.hidden = True
+        self.with_shield = True
+        self.spawn_stopper = True
         Shield(self)
         SpawnAnim(self)
+        self.rect.x = self.coords[0]
+        self.rect.y = self.coords[1]
 
     def activate_bonus(self, name_bonus):
         # name_bonus = 's' - star, 'h' - helmet, 't' - tank, 'p' - pistol
@@ -73,13 +76,16 @@ class Player(pygame.sprite.Sprite):
             self.with_shield = True
             Shield(self)
         elif name_bonus == 'p':
-            pass
+            self.type_tanks = 't4'
+            self.lives += 2
+            self.set_properties()
 
     def set_properties(self):
         if self.type_tanks == 't1':
             self.speed = 2
         elif self.type_tanks == 't2':
             self.speed = 3
+            self.bullet_speed = 6
         elif self.type_tanks == 't3':
             self.bullet_speed = 7
 
@@ -97,18 +103,19 @@ class Player(pygame.sprite.Sprite):
         s.fill(pygame.color.Color('black'))
         self.mask = pygame.mask.from_surface(s)
 
-    def hide(self):
-        # временно скрыть игрока
-        self.hidden = True
-        self.hide_timer = pygame.time.get_ticks()
-        # self.rect.center = (WIDTH / 2, HEIGHT + 200)
-
     def kill(self):
-        if self.with_shield:
-            return
-        else:
-            # TODO уменьшение жизки
-            pass
+        if not self.with_shield:
+            Explosion(self)
+            if self.lives < 0:
+                self.game.game_over()
+                self.hidden = True
+                return
+            if self.type_tanks == 't4':
+                # TODO прописать особенность для танка 4
+                #  типа у игрока при убийстве
+                pass
+            # self.lives -= 1
+            # self.spawn()
 
     def move_collide(self, side: str, speed=(0, 0)):
         self.side = side
@@ -135,16 +142,13 @@ class Player(pygame.sprite.Sprite):
             self.move_collide('r', (self.speed, 0))
 
     def update(self, *args):
-        if self.spawn_stopper:
+        if self.hidden:
             self.image = self.none_image
             return
-        elif not self.spawn_stopper and self.f_sp_st:
+        elif not self.hidden and self.spawn_stopper:
             self.image = self.orig_image
-            self.f_sp_st = False
-        if self.hidden and pygame.time.get_ticks() - self.hide_timer > 1000:
-            self.hidden = False
-            self.rect.centerx = WIDTH / 2
-            self.rect.bottom = HEIGHT - 10
+            self.spawn_stopper = False
+
         # TODO При игре по сети необходимо как то получать нажатые клавиши
         keystate = pygame.key.get_pressed()
         if self.player == 1:
@@ -161,9 +165,22 @@ class Player(pygame.sprite.Sprite):
         if now - self.last_shot > self.shoot_delay:
             self.last_shot = now
             if self.bullet is None or not self.bullet.alive():
-                bullet = Bullet(self.rect, self.side, self.game, self, speed=self.bullet_speed)
+                bullet = Bullet(self.rect, self.side, self.game, self,
+                                speed=self.bullet_speed)
                 bullet.add(self.game.all_sprites, self.game.bullets)
                 self.bullet = bullet
+
+    def earn_points(self, mob):
+        # mob - points
+        points = mob.points
+        PointsAnim(self.game, points, mob.rect)
+        self.count_points += points
+        if mob.__class__.__name__ == 'Bot':
+            type_b = mob.type_tanks
+            if type_b not in self.killed_enemies:
+                self.killed_enemies[type_b] = points
+            else:
+                self.killed_enemies[type_b] += points
 
     def compare_rect_with_bot(self, rect: pygame.rect.Rect):
         if rect.x <= self.rect.x <= rect.x + rect.width\
@@ -212,14 +229,16 @@ class Bullet(pygame.sprite.Sprite):
                         c.change_yourself(coord_collide)
                     self.kill()
             if c in self.game.player_group:
-                # TODO сделать уменьшение жизни у игрока и анимацию попадания
-                self.kill()
+                if self.who_shoot != c:
+                    c.kill()
+                    self.kill()
             if c in self.game.bullets and c is not self:
                 if self.who_shoot.__class__ != c.who_shoot.__class__:
                     self.kill()
                     c.kill()
             if c in self.game.mobs_group and \
                     self.who_shoot.__class__ == Player:
+                self.who_shoot.earn_points(c)
                 c.kill()
                 self.kill()
             if c == self.game.eagle:
@@ -232,19 +251,19 @@ class Bullet(pygame.sprite.Sprite):
 
     def set_rect(self, rect_tank):
         if self.side == 't':
-            self.rect.bottom = rect_tank.top
+            self.rect.top = rect_tank.top  # self.rect.bottom
             self.rect.centerx = rect_tank.centerx
             self.speedy = -self.speed
         if self.side == 'l':
-            self.rect.right = rect_tank.left
+            self.rect.left = rect_tank.left  # self.rect.right
             self.rect.centery = rect_tank.centery
             self.speedx = -self.speed
         if self.side == 'r':
-            self.rect.left = rect_tank.right
+            self.rect.right = rect_tank.right  # self.rect.left
             self.rect.centery = rect_tank.centery
             self.speedx = self.speed
         if self.side == 'b':
-            self.rect.top = rect_tank.bottom
+            self.rect.bottom = rect_tank.bottom  # self.rect.top
             self.rect.centerx = rect_tank.centerx
             self.speedy = self.speed
 
@@ -294,15 +313,12 @@ class Bot(pygame.sprite.Sprite):
         self.bonus_trigger_timer = pygame.time.get_ticks()
         self.trigger_image = 3
 
-        self.isFreeze = False
-        self.spawn_stopper = True
-        self.f_sp_st = True
+        self.isFreeze = self.spawn_stopper = self.hidden = False
+
         self.speed = 2
-        self.speedx = 0
-        self.speedy = 0
+        self.speedx = self.speedy = 0
+
         self.lives = 1
-        self.hidden = False
-        self.hide_timer = pygame.time.get_ticks()
 
         self.can_shoot = True
         self.bullet = None
@@ -324,22 +340,26 @@ class Bot(pygame.sprite.Sprite):
 
         self.coords = coords
         self.rect = self.image.get_rect()
-        self.rect.x = self.coords[0]
-        self.rect.y = self.coords[1]
         self.none_image = pygame.Surface((self.rect.width, self.rect.height),
                                          pygame.SRCALPHA, 32)
         self.orig_image = self.image.copy()
+        self.spawn()
 
+    def spawn(self):
+        self.hidden = True
+        self.spawn_stopper = True
         SpawnAnim(self)
+        self.rect.x = self.coords[0]
+        self.rect.y = self.coords[1]
 
     def update(self, *event):
-        if self.spawn_stopper:
+        if self.hidden:
             self.image = self.none_image
             return
-        elif not self.spawn_stopper and self.f_sp_st:
+        elif not self.hidden and self.spawn_stopper:
             self.image = self.orig_image
-            self.f_sp_st = False
-        if not self.isFreeze and not self.spawn_stopper:
+            self.spawn_stopper = False
+        if not self.isFreeze and not self.hidden:
             self.move()
             self.shoot()
 
@@ -371,12 +391,6 @@ class Bot(pygame.sprite.Sprite):
 
     def set_target(self, target):
         self.target = target
-
-    def hide(self):
-        # временно скрыть игрока
-        self.hidden = True
-        self.hide_timer = pygame.time.get_ticks()
-        # self.rect.center = (WIDTH / 2, HEIGHT + 200)
 
     def get_image_name(self):
         now = pygame.time.get_ticks()
@@ -613,6 +627,9 @@ class Bot(pygame.sprite.Sprite):
         # TODO доп.комментарии
         p_x, p_y = players_rect.centerx, players_rect.centery
         b_x, b_y = self.rect.centerx, self.rect.centery
+        """Если мы достагли цели 
+        (одинаковые центральные координаты или координаты сторон одинаковы)
+        то останавливаемся"""
         if (p_x == b_x and b_y == p_y) or \
             (players_rect.left == self.rect.right and
                 players_rect.top <= b_y <= players_rect.bottom) or\
@@ -625,9 +642,14 @@ class Bot(pygame.sprite.Sprite):
             self.is_stop_y = False
             self.is_stop_x = False
             return None
+        # Если игрок ниже бота, то говорим боту передвигаться вниз
         if p_y >= b_y and not self.is_stop_y:
             if not (p_y - self.speed <= b_y <= p_y + self.speed):
                 return 'b'
+            # Если спустились настолько,
+            # что мы на одной координате по y (при этом цель не достигнули)
+            # то говорим, что мы уперлись по координате y (is_stop_y)
+            # и теперь передвигаемся по координате x
             self.is_stop_y = True
             self.is_stop_x = False
         elif p_y <= b_y and not self.is_stop_y:
@@ -638,6 +660,12 @@ class Bot(pygame.sprite.Sprite):
         if p_x >= b_x:
             if not (p_x - self.speed <= b_x <= p_x + self.speed):
                 return 'r'
+            # Аналогично что и для координаты y. Если вышли на одну
+            # координату, то говорим, что мы уперлись,
+            # и теперь необходимо передвигаться по Y
+            # В данный момент не используется по причине того,
+            # что сначала идет проверка по Y,
+            # и в любом случае мы сначала будем двигаться по Y
             self.is_stop_y = False
             self.is_stop_x = True
         elif p_x <= b_x:
@@ -746,14 +774,11 @@ class Eagle(pygame.sprite.Sprite):
                            [0, 1], [-1, 1], [-1, 0]]:
                 x, y = self.rect.x + (kx * self.TILE_SIZE),\
                        self.rect.y + (ky * self.TILE_SIZE)
-                print(x, y)
                 empty_b = EmptyBot(x, y, self.TILE_SIZE, self.TILE_SIZE)
                 c = pygame.sprite.spritecollideany(empty_b,
                                                    self.game.wall_group)
-                print(c)
-                if c:
-                    if c.isBroken:
-                        c.set_bonus(name_bonus)
+                if c and c.isBroken:
+                    c.set_bonus(name_bonus)
 
 
 class Wall(pygame.sprite.Sprite):
@@ -961,11 +986,11 @@ class Bonus(pygame.sprite.Sprite):
         super().__init__(game.all_sprites, game.bonus_group)
         available_bonuses = ['s', 's', 'g', 'g', 'c', 'h', 'p', 'sh', 't']
         self.game = game
+        self.points = 500
         self.bonus = choice(available_bonuses)
-        # self.bonus = 'h'
+        self.bonus = 'c'
         self.image = load_image(f"{DIR_FOR_TANKS_IMG}"
                                 f"bonus\\{self.images[self.bonus]}")
-
         k = ((3 * self.game.TILE_SIZE) // 4) // self.image.get_rect().width
         self.image = pygame.transform.scale(self.image,
                                             (self.image.get_rect().width * k,
@@ -1040,7 +1065,7 @@ class Shield(pygame.sprite.Sprite):
         self.rect.y -= self.offset
 
     def update(self, *args):
-        if not self.player.spawn_stopper:
+        if not self.player.hidden:
             now = pygame.time.get_ticks()
             self.shield_timer = now if self.shield_timer is None\
                 else self.shield_timer
@@ -1085,7 +1110,7 @@ class SpawnAnim(pygame.sprite.Sprite):
     def update(self, *args):
         now = pygame.time.get_ticks()
         if now - self.timer > self.duration:
-            self.tank.spawn_stopper = False
+            self.tank.hidden = False
             self.kill()
         else:
             if now - self.last_update > self.frame_rate:
@@ -1135,3 +1160,22 @@ class Explosion(pygame.sprite.Sprite):
                 self.rect = self.image.get_rect()
                 self.rect.center = center
             self.frame += 1
+
+
+class PointsAnim(pygame.sprite.Sprite):
+    def __init__(self, game, summ_points, rect):
+        super().__init__(game.all_sprites, game.animation_sprite)
+        font = pygame.font.Font(None, game.TILE_SIZE - game.TILE_SIZE // 4)
+        self.image = font.render(f"{summ_points}", True, pygame.Color('white'))
+        self.rect = self.image.get_rect()
+
+        self.rect.x = rect.centerx - self.rect.width // 2
+        self.rect.y = rect.centery - self.rect.height // 2
+
+        self.start_timer = pygame.time.get_ticks()
+        self.duration = 500
+
+    def update(self, *args, **kwargs):
+        now = pygame.time.get_ticks()
+        if now - self.start_timer > self.duration:
+            self.image.set_alpha(max(0, self.image.get_alpha() - 10))

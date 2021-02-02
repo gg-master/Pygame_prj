@@ -122,8 +122,7 @@ class BotManager:
         self.check_bonuses()
         # Определяем убиты ли все боты. Если убиты, то игрок выйграл
         if len(self.game.mobs_group) <= 0 and self.global_count_bots <= 0:
-            self.game.isGameOver = True
-            self.game.game_over()
+            self.game.game_over(win=True)
         # Если игра продолжается, то мы создаем бота в
         # зависимости от времени респавна и количества ботов на карте
         if not self.game.isGameOver and \
@@ -294,7 +293,7 @@ class Map:
 
 
 class Game:
-    def __init__(self, type_game, number_level):
+    def __init__(self, type_game, number_level, screen_surf):
         self.map = Map(f'{MAPDIR}map{number_level}.tmx', MAP_SIZE)
         self.map_object = self.map.map
         self.TILE_SIZE = self.map.TILE_SIZE
@@ -302,6 +301,7 @@ class Game:
         self.type_game = type_game
         self.level = number_level
 
+        self.screen = screen_surf
         self.isGameOver = False
 
         self.all_sprites = pygame.sprite.Group()
@@ -362,6 +362,9 @@ class Game:
         self.bot_manager.update(events)
         self.animation_sprite.update()
 
+        if self.isGameOver:
+            self.game_over()
+
     def render(self):
         # Отрисовка по слоям.
         """
@@ -380,7 +383,8 @@ class Game:
         # Отрисовка деревьев
         self.map.render_layer(screen, 'trees')
 
-    def game_over(self):
+    def game_over(self, win=False):
+        self.isGameOver = True
         print('game_over')
         # quit()
 
@@ -391,7 +395,7 @@ fullscreen = False
 if __name__ == '__main__':
     clock = pygame.time.Clock()
     running = True
-    game = Game(1, 1)
+    game = Game(1, 1, screen)
     while running:
         screen.fill(pygame.Color('black'))
         for event in pygame.event.get():
