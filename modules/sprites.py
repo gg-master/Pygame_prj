@@ -35,7 +35,7 @@ class Player(pygame.sprite.Sprite):
         self.count_points = 0
 
         self.speed = 2
-        self.lives = 3
+        self.lives = 2
 
         self.bullet = None
         self.bullet_speed = 5
@@ -60,10 +60,10 @@ class Player(pygame.sprite.Sprite):
         self.hidden = True
         self.with_shield = True
         self.spawn_stopper = True
-        Shield(self)
-        SpawnAnim(self)
         self.rect.x = self.coords[0]
         self.rect.y = self.coords[1]
+        Shield(self)
+        SpawnAnim(self)
 
     def activate_bonus(self, name_bonus):
         # name_bonus = 's' - star, 'h' - helmet, 't' - tank, 'p' - pistol
@@ -105,17 +105,17 @@ class Player(pygame.sprite.Sprite):
 
     def kill(self):
         if not self.with_shield:
+            self.type_tanks = 't1'
             Explosion(self)
-            if self.lives < 0:
-                self.game.game_over()
-                self.hidden = True
+            if self.lives <= 0:
+                super().kill()
                 return
             if self.type_tanks == 't4':
                 # TODO прописать особенность для танка 4
                 #  типа у игрока при убийстве
                 pass
-            # self.lives -= 1
-            # self.spawn()
+            self.lives -= 1
+            self.spawn()
 
     def move_collide(self, side: str, speed=(0, 0)):
         self.side = side
@@ -222,25 +222,32 @@ class Bullet(pygame.sprite.Sprite):
         # TODO столкновне с другими пулями, игроками
         c = pygame.sprite.spritecollideany(self, self.game.all_sprites)
         if c is not None:
+            # Пуля врезалась в стену
             if c in self.game.wall_group and c.isWall:
                 coord_collide = pygame.sprite.collide_mask(c, self)
                 if coord_collide is not None:
                     if c.isBroken:
                         c.change_yourself(coord_collide)
                     self.kill()
+            # Если пуля врезелась в танк игрока и
+            # при этом эту пулю выстрелил не сам игрок
             if c in self.game.player_group:
                 if self.who_shoot != c:
                     c.kill()
                     self.kill()
+            # Если пуля врезалась в другую пулю, выпущенную из вражеского танка
             if c in self.game.bullets and c is not self:
-                if self.who_shoot.__class__ != c.who_shoot.__class__:
+                if self.who_shoot != c.who_shoot:
                     self.kill()
                     c.kill()
+            # Пуля врезалась в бота и при этом выстрел был от игрока
             if c in self.game.mobs_group and \
-                    self.who_shoot.__class__ == Player:
+                    self.who_shoot.__class__.__name__ == 'Player':
                 self.who_shoot.earn_points(c)
+                print(self.who_shoot.count_points)
                 c.kill()
                 self.kill()
+            # Пуля врезалась в орла
             if c == self.game.eagle:
                 c.eagle_break()
                 self.kill()
@@ -338,7 +345,7 @@ class Bot(pygame.sprite.Sprite):
         self.image = self.mask = None
         self.load_tanks_image()
 
-        self.coords = coords
+        self.coords = coords[:-1]
         self.rect = self.image.get_rect()
         self.none_image = pygame.Surface((self.rect.width, self.rect.height),
                                          pygame.SRCALPHA, 32)
@@ -348,9 +355,9 @@ class Bot(pygame.sprite.Sprite):
     def spawn(self):
         self.hidden = True
         self.spawn_stopper = True
-        SpawnAnim(self)
         self.rect.x = self.coords[0]
         self.rect.y = self.coords[1]
+        SpawnAnim(self)
 
     def update(self, *event):
         if self.hidden:
@@ -592,9 +599,12 @@ class Bot(pygame.sprite.Sprite):
         if self.target is None:
             just_drive()
         if self.target == 'players':
-            # Узнаем позицию цели
-            players_rect = self.get_nearest_players()
-            go_to(players_rect)
+            if any(map(lambda x: x.alive(), self.game.player_group)):
+                # Узнаем позицию цели
+                players_rect = self.get_nearest_players()
+                go_to(players_rect)
+            else:
+                just_drive()
         if self.target == 'eagle':
             rect = self.game.eagle.rect
             go_to(rect)
@@ -988,7 +998,7 @@ class Bonus(pygame.sprite.Sprite):
         self.game = game
         self.points = 500
         self.bonus = choice(available_bonuses)
-        self.bonus = 'c'
+        # self.bonus = 'p'
         self.image = load_image(f"{DIR_FOR_TANKS_IMG}"
                                 f"bonus\\{self.images[self.bonus]}")
         k = ((3 * self.game.TILE_SIZE) // 4) // self.image.get_rect().width
@@ -1032,6 +1042,7 @@ class Bonus(pygame.sprite.Sprite):
             self.game.bot_manager.activate_bonus(self.bonus)
         elif self.bonus in ['sh']:
             self.game.eagle.activate_bonus(self.bonus)
+        PointsAnim(self.game, self.points, self.rect)
         self.kill()
 
 
@@ -1039,7 +1050,7 @@ class Shield(pygame.sprite.Sprite):
     shield_anim = {0: 's1.png', 1: 's2.png'}
 
     def __init__(self, player):
-        super().__init__(player.game.all_sprites, player.game.animation_sprite)
+        super().__init__(player.game.animation_sprite)
         self.player = player
         self.shield_n = 0
         self.shield_timer = None
@@ -1082,7 +1093,7 @@ class SpawnAnim(pygame.sprite.Sprite):
     anim_img = {0: 'b1.png', 1: 'b2.png', 2: 'b3.png', 3: 'b4.png'}
 
     def __init__(self, tank):
-        super().__init__(tank.game.all_sprites, tank.game.animation_sprite)
+        super().__init__(tank.game.animation_sprite)
         self.tank = tank
         self.anim_n = 0
         self.timer = pygame.time.get_ticks()
@@ -1123,7 +1134,7 @@ class Explosion(pygame.sprite.Sprite):
                  3: 'b4.png', 4: 'b5.png'}
 
     def __init__(self, obj):
-        super().__init__(obj.game.all_sprites, obj.game.animation_sprite)
+        super().__init__(obj.game.animation_sprite)
         self.obj = obj
         self.type_obj = obj.__class__.__name__
         self.max_index = 3 if self.type_obj == 'Bullet' else 4
@@ -1164,7 +1175,7 @@ class Explosion(pygame.sprite.Sprite):
 
 class PointsAnim(pygame.sprite.Sprite):
     def __init__(self, game, summ_points, rect):
-        super().__init__(game.all_sprites, game.animation_sprite)
+        super().__init__(game.animation_sprite)
         font = pygame.font.Font(None, game.TILE_SIZE - game.TILE_SIZE // 4)
         self.image = font.render(f"{summ_points}", True, pygame.Color('white'))
         self.rect = self.image.get_rect()

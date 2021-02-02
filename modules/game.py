@@ -117,12 +117,17 @@ class BotManager:
         self.bonus_delay = None
         self.bonus_name = None
 
+    def check_state(self):
+        if len(self.game.mobs_group) <= 0 and self.global_count_bots <= 0:
+            return True
+        return False
+
     def update(self, events=None):
         now = pygame.time.get_ticks()
         self.check_bonuses()
         # Определяем убиты ли все боты. Если убиты, то игрок выйграл
-        if len(self.game.mobs_group) <= 0 and self.global_count_bots <= 0:
-            self.game.game_over(win=True)
+        if self.check_state():
+            return
         # Если игра продолжается, то мы создаем бота в
         # зависимости от времени респавна и количества ботов на карте
         if not self.game.isGameOver and \
@@ -303,6 +308,7 @@ class Game:
 
         self.screen = screen_surf
         self.isGameOver = False
+        self.isWin = False
 
         self.all_sprites = pygame.sprite.Group()
         self.mobs_group = pygame.sprite.Group()
@@ -352,18 +358,18 @@ class Game:
         x, y = tile.x / self.map.koeff + OFFSET, tile.y / self.map.koeff + OFFSET
         return Eagle(self, x, y, self.TILE_SIZE)
 
-    def update(self, events=None):
-        if self.eagle.isBroken:
-            self.game_over()
-        self.player_group.update(events)
-        self.bullets.update()
-        self.bonus_group.update()
-        self.wall_group.update()
-        self.bot_manager.update(events)
-        self.animation_sprite.update()
-
+    def update(self, *events):
         if self.isGameOver:
             self.game_over()
+        # if not self.isGameOver:
+        self.player_group.update(events)
+        self.bullets.update()
+        self.wall_group.update()
+        self.bot_manager.update(events)
+        self.bonus_group.update()
+        self.animation_sprite.update()
+
+        self.is_game_over()
 
     def render(self):
         # Отрисовка по слоям.
@@ -378,14 +384,24 @@ class Game:
         self.map.render_layer(screen, 'ground')
         # render player and bullet and mobs
         self.all_sprites.draw(screen)
-        self.bonus_group.draw(screen)
-        self.animation_sprite.draw(screen)
         # Отрисовка деревьев
         self.map.render_layer(screen, 'trees')
 
-    def game_over(self, win=False):
-        self.isGameOver = True
-        print('game_over')
+        self.bonus_group.draw(screen)
+        self.animation_sprite.draw(screen)
+
+    def is_game_over(self):
+        if not self.isGameOver:
+            if self.bot_manager.check_state():
+                self.isWin = True
+                self.isGameOver = True
+            elif all(map(lambda x: not x.alive(), self.player_group)) or \
+                    self.eagle.isBroken:
+                self.isWin = False
+                self.isGameOver = True
+
+    def game_over(self):
+        print('game_over', self.isWin)
         # quit()
 
 
