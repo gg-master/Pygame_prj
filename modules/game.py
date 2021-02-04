@@ -428,6 +428,7 @@ class Game:
         self.screen = screen_surf
         self.isGameOver = False
         self.isWin = False
+        self.is_pause = False
 
         self.all_sprites = pygame.sprite.Group()
         self.mobs_group = pygame.sprite.Group()
@@ -478,19 +479,27 @@ class Game:
         x, y = tile.x / self.map.koeff + OFFSET, tile.y / self.map.koeff + OFFSET
         return Eagle(self, x, y, self.TILE_SIZE)
 
-    def update(self, *events):
-        if self.isGameOver:
-            self.game_over()
-        # if not self.isGameOver:
-        self.player_group.update(events)
-        self.bullets.update()
-        self.wall_group.update()
-        self.bot_manager.update(events)
-        self.bonus_group.update()
-        self.animation_sprite.update()
-        self.menu.update()
+    def update(self, events=None):
+        if events is not None:
+            if events.type == pygame.KEYDOWN:
+                if events.key == pygame.K_p:
+                    self.is_pause = not self.is_pause
+        if not self.is_pause:
+            if self.isGameOver:
+                self.game_over()
+            # if not self.isGameOver:
+            self.player_group.update(events)
+            self.bullets.update()
+            self.wall_group.update()
+            self.bot_manager.update(events)
+            self.bonus_group.update()
+            self.animation_sprite.update()
+            self.menu.update()
 
-        self.is_game_over()
+            self.is_game_over()
+        else:
+            # TODO Реализовать окно паузы
+            pass
 
     def render(self):
         # Отрисовка по слоям.
@@ -557,6 +566,7 @@ if __name__ == '__main__':
                         screen = pygame.display.set_mode(
                             (screen.get_width(), screen.get_height()),
                             pygame.RESIZABLE)
+            game.update(event)
         game.update()
         game.render()
 
