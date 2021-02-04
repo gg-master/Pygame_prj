@@ -1,7 +1,10 @@
 import pytmx
 import pygame
 import os
+from math import ceil
 from modules.sprites import Player, Bot, Eagle, Wall, EmptyBot
+from default_funcs import load_image
+
 
 """
 Карта должна содержать минимум эти слои.
@@ -117,6 +120,9 @@ class BotManager:
         self.bonus_delay = None
         self.bonus_name = None
 
+    def get_count_bots(self):
+        return self.global_count_bots
+
     def check_state(self):
         if len(self.game.mobs_group) <= 0 and self.global_count_bots <= 0:
             return True
@@ -204,7 +210,7 @@ class BotManager:
             self.bonus_name = name_bonus
         if name_bonus == 'g':
             for i in self.game.mobs_group:
-                i.kill()
+                i.kill(permanent=True)
 
     def check_bonuses(self):
         now = pygame.time.get_ticks()
@@ -219,11 +225,18 @@ class BotManager:
 
 
 class Map:
-    def __init__(self, path, map_size):
+    def __init__(self, number_level, map_size):
         # Т.к класс игры находится в одельной папке,
         # которая не лежит рядом c кодом, то нам приходится
         # настроить доступ к файлу
-        os.chdir('..')
+        if os.getcwd().split('\\')[-1] == 'modules':
+            os.chdir('..')
+
+        self.level = number_level
+        path = f'{MAPDIR}map{self.level}.tmx'
+        if not os.path.isfile(path):
+            self.level = 1
+            path = f'{MAPDIR}map{self.level}.tmx'
         self.map = pytmx.load_pygame(os.path.join(os.getcwd(), path))
         self.TILE_SIZE = map_size // self.map.width
         # Ширина и выстоа это количество клеток на карте
@@ -297,14 +310,120 @@ class Map:
         return False
 
 
+class Menu(pygame.sprite.Sprite):
+    images = {
+        'bots': 'bots.png',
+        'flag': 'level_flag.png',
+        'p1': 'p1.png',
+        'p2': 'p2.png',
+        'pl': 'players.png'
+    }
+
+    def __init__(self, game):
+        super().__init__(game.all_sprites)
+        self.text_font = None
+        self.game = game
+        delta_x, delta_y = 30, self.game.MAP_SIZE.y
+        self.rect = pygame.Rect(game.MAP_SIZE.width + delta_x, delta_y,
+                                game.TILE_SIZE * 2, game.MAP_SIZE.height)
+        self.m1 = self.game.TILE_SIZE / 2.8
+        self.m2 = self.game.TILE_SIZE / 2
+        self.m3 = self.game.TILE_SIZE
+
+        self.bot_img = self.load_image('bots', self.m1)
+        self.p = self.load_image('pl', self.m2)
+        self.flag = self.load_image('flag', self.m3)
+        self.p1 = self.load_image('p1', self.m2)
+        self.p2 = None
+        self.is_two_pl = True if self.game.type_game == 2 else False
+        if self.is_two_pl:
+            self.p2 = self.load_image('p2', self.m2)
+
+        self.image = pygame.Surface((self.rect.width, self.rect.height),
+                                    pygame.SRCALPHA, 32)
+
+    def load_image(self, name, m):
+        image = load_image(f"{DIR_FOR_TANKS_IMG}\\menu\\{self.images[name]}")
+        rect = image.get_rect()
+        koeff = m / rect.height
+        return pygame.transform.scale(image, (ceil(rect.width * koeff),
+                                              ceil(rect.height * koeff)))
+
+    def draw_bots_log(self):
+        count_bots = self.game.bot_manager.get_count_bots()
+        x, y, w, h = self.bot_img.get_rect()
+        org_x, c = x, 0
+        for i in range(ceil(count_bots / 2)):
+            for j in range(2):
+                if c >= count_bots:
+                    break
+                self.image.blit(self.bot_img, (x, y, w, h))
+                c += 1
+                x += w + 4
+            x = org_x
+            y += h + 4
+
+    def draw_players_log(self):
+        x = 0
+        y = self.rect.height // 2
+        font = pygame.font.Font(self.text_font, int(self.m3))
+        p1_lives = font.render(f"{self.game.player1.lives}", True,
+                               pygame.Color('black'))
+        p2_lives = font.render(f"{self.game.player2.lives}", True,
+                               pygame.Color('black')) \
+            if self.is_two_pl else None
+        level_text = font.render(f"{self.game.level}", True,
+                                 pygame.Color('black'))
+
+        pl_rect = self.p1.get_rect()
+        self.image.blit(self.p1, (x, y, pl_rect.width, pl_rect.height))
+
+        x, y = 0, y + pl_rect.height + 4
+        p_rc = self.p.get_rect()
+        self.image.blit(self.p, (x, y, p_rc.width, p_rc.height))
+
+        x, y = p_rc.width + 4, y
+        pl_lv = p1_lives.get_rect()
+        self.image.blit(p1_lives, (x, y,
+                                   pl_lv.width, pl_lv.height))
+
+        if self.is_two_pl:
+            x, y = 0, y + pl_lv.height + 10
+            pl_rect = self.p2.get_rect()
+            self.image.blit(self.p2, (x, y, pl_rect.width, pl_rect.height))
+
+            x, y = 0, y + pl_rect.height + 4
+            p_rc = self.p.get_rect()
+            self.image.blit(self.p, (x, y, p_rc.width, p_rc.height))
+
+            x, y = p_rc.width + 4, y
+            pl_lv = p2_lives.get_rect()
+            self.image.blit(p2_lives, (x, y,
+                                       pl_lv.width, pl_lv.height))
+
+        fl_rc = self.flag.get_rect()
+        x, y = 0, self.rect.height - fl_rc.height * 3
+        self.image.blit(self.flag, (x, y, fl_rc.width, fl_rc.height))
+
+        x, y = x + fl_rc.width // 2, y + fl_rc.height // 1.5
+        lev_rect = level_text.get_rect()
+        self.image.blit(level_text, (x, y, lev_rect.width, lev_rect.height))
+
+    def update(self, *args):
+        self.image.fill(pygame.SRCALPHA)
+        self.draw_bots_log()
+        self.draw_players_log()
+
+
 class Game:
     def __init__(self, type_game, number_level, screen_surf):
-        self.map = Map(f'{MAPDIR}map{number_level}.tmx', MAP_SIZE)
+        self.map = Map(number_level, MAP_SIZE)
         self.map_object = self.map.map
         self.TILE_SIZE = self.map.TILE_SIZE
-        self.MAP_SIZE = [OFFSET, OFFSET, MAP_SIZE + OFFSET, MAP_SIZE + OFFSET]
+        self.MAP_SIZE = pygame.Rect(OFFSET, OFFSET,
+                                    MAP_SIZE + OFFSET, MAP_SIZE + OFFSET)
         self.type_game = type_game
-        self.level = number_level
+        self.level = self.map.level
 
         self.screen = screen_surf
         self.isGameOver = False
@@ -344,6 +463,7 @@ class Game:
         else:
             raise Exception('Неверный тип игры')
         self.bot_manager = BotManager(self)
+        self.menu = Menu(self)
 
     def create_walls(self):
         if not self.map.check_('walls'):
@@ -368,6 +488,7 @@ class Game:
         self.bot_manager.update(events)
         self.bonus_group.update()
         self.animation_sprite.update()
+        self.menu.update()
 
         self.is_game_over()
 
@@ -380,13 +501,14 @@ class Game:
         2. spawn_bots
         3. trees
         """
+
+        self.screen.fill(pygame.Color(115, 117, 115))
         # Отрисовка земли
         self.map.render_layer(screen, 'ground')
         # render player and bullet and mobs
         self.all_sprites.draw(screen)
         # Отрисовка деревьев
         self.map.render_layer(screen, 'trees')
-
         self.bonus_group.draw(screen)
         self.animation_sprite.draw(screen)
 
@@ -402,7 +524,10 @@ class Game:
 
     def game_over(self):
         print('game_over', self.isWin)
-        # quit()
+        if self.isWin:
+            pass
+            # TODO Заготовка для будущей смены карты
+            # self.__init__(self.type_game, self.level + 1, self.screen)
 
 
 fullscreen = False
@@ -411,7 +536,7 @@ fullscreen = False
 if __name__ == '__main__':
     clock = pygame.time.Clock()
     running = True
-    game = Game(1, 1, screen)
+    game = Game(2, 1, screen)
     while running:
         screen.fill(pygame.Color('black'))
         for event in pygame.event.get():

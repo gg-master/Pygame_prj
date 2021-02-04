@@ -36,6 +36,7 @@ class Player(pygame.sprite.Sprite):
 
         self.speed = 2
         self.lives = 2
+        self.bullet_prof = False
 
         self.bullet = None
         self.bullet_speed = 5
@@ -57,6 +58,8 @@ class Player(pygame.sprite.Sprite):
         self.spawn()
 
     def spawn(self):
+        self.type_tanks = 't1'
+        self.set_properties()
         self.hidden = True
         self.with_shield = True
         self.spawn_stopper = True
@@ -78,6 +81,7 @@ class Player(pygame.sprite.Sprite):
         elif name_bonus == 'p':
             self.type_tanks = 't4'
             self.lives += 2
+            self.bullet_prof = True
             self.set_properties()
 
     def set_properties(self):
@@ -105,15 +109,14 @@ class Player(pygame.sprite.Sprite):
 
     def kill(self):
         if not self.with_shield:
-            self.type_tanks = 't1'
             Explosion(self)
             if self.lives <= 0:
                 super().kill()
                 return
             if self.type_tanks == 't4':
-                # TODO прописать особенность для танка 4
-                #  типа у игрока при убийстве
-                pass
+                if self.bullet_prof:
+                    self.bullet_prof = False
+                    return
             self.lives -= 1
             self.spawn()
 
@@ -124,9 +127,8 @@ class Player(pygame.sprite.Sprite):
         c = pygame.sprite.spritecollide(self, self.game.map_group, False,
                                         pygame.sprite.collide_mask)
         c_b = pygame.sprite.spritecollideany(self, self.game.bonus_group)
-        c_b.activate_bonus(self) if c_b else ''
+        c_b.activate_bonus(self) if c_b else None
         del c[c.index(self)]
-        # TODO обработка столкновений с другими игроками и тд
         """За обработку столкновений с пулями отвечает сама пуля"""
         if self.game.map.check_collide(self.rect) or c:
             self.rect = self.rect.move(-speed[0], -speed[1])
@@ -370,7 +372,10 @@ class Bot(pygame.sprite.Sprite):
             self.move()
             self.shoot()
 
-    def kill(self):
+    def kill(self, permanent=False):
+        if permanent:
+            Explosion(self)
+            super().kill()
         if self.lives > 1:
             self.lives -= 1
             return
@@ -694,55 +699,47 @@ class Bot(pygame.sprite.Sprite):
                 self.side = 'l' if random() < 1 / 2 else 'r'
                 self.prev_side = 'b'
                 return
-            else:
-                if random() < 1 / 2:
-                    self.side = anti_side[self.prev_side]
-                    self.prev_side = 'b'
-                    return
-                else:
-                    self.side = 't'
-                    return
+            if random() < 1 / 2:
+                self.side = anti_side[self.prev_side]
+                self.prev_side = 'b'
+                return
+            self.side = 't'
+            return
         if self.side == 't':
             if self.prev_side in [anti_side[self.side], 't']:
                 self.side = 'l' if random() < 1 / 2 else 'r'
                 self.prev_side = 't'
                 return
-            else:
-                if random() < 1 / 2:
-                    self.side = anti_side[self.prev_side]
-                    self.prev_side = 't'
-                    return
-                else:
-                    self.side = 'b'
-                    return
+            if random() < 1 / 2:
+                self.side = anti_side[self.prev_side]
+                self.prev_side = 't'
+                return
+            self.side = 'b'
+            return
         if self.side == 'l':
             if self.prev_side == self.side:
                 self.side = 't' if random() < 1 / 2 else 'b'
                 self.prev_side = 'l'
                 return
-            else:
-                if random() < 1 / 2:
-                    self.side = 't' if self.prev_side == 'b' else 'b'
-                    self.prev_side = 'l'
-                    return
-                else:
-                    self.side = 'r'
-                    self.prev_side = 'b'
-                    return
+            if random() < 1 / 2:
+                self.side = 't' if self.prev_side == 'b' else 'b'
+                self.prev_side = 'l'
+                return
+            self.side = 'r'
+            self.prev_side = 'b'
+            return
         if self.side == 'r':
             if self.prev_side == self.side:
                 self.side = 't' if random() < 1 / 2 else 'b'
                 self.prev_side = 'b'
                 return
-            else:
-                if random() < 1 / 2:
-                    self.side = 't' if self.prev_side == 'b' else 'b'
-                    self.prev_side = 'r'
-                    return
-                else:
-                    self.side = 'l'
-                    self.prev_side = 'b'
-                    return
+            if random() < 1 / 2:
+                self.side = 't' if self.prev_side == 'b' else 'b'
+                self.prev_side = 'r'
+                return
+            self.side = 'l'
+            self.prev_side = 'b'
+            return
 
 
 class Eagle(pygame.sprite.Sprite):
@@ -998,7 +995,7 @@ class Bonus(pygame.sprite.Sprite):
         self.game = game
         self.points = 500
         self.bonus = choice(available_bonuses)
-        # self.bonus = 'p'
+        self.bonus = 'p'
         self.image = load_image(f"{DIR_FOR_TANKS_IMG}"
                                 f"bonus\\{self.images[self.bonus]}")
         k = ((3 * self.game.TILE_SIZE) // 4) // self.image.get_rect().width
@@ -1009,13 +1006,13 @@ class Bonus(pygame.sprite.Sprite):
         self.rect = self.image.get_rect()
         self.hide_image = pygame.Surface((self.rect.width, self.rect.height),
                                          pygame.SRCALPHA, 32)
-        self.rect.center = [randrange(self.game.MAP_SIZE[0] +
+        self.rect.center = [randrange(self.game.MAP_SIZE.x +
                                       self.game.TILE_SIZE * 2,
-                                      self.game.MAP_SIZE[2] -
+                                      self.game.MAP_SIZE.width -
                                       self.game.TILE_SIZE * 2),
-                            randrange(self.game.MAP_SIZE[1] +
+                            randrange(self.game.MAP_SIZE.y +
                                       self.game.TILE_SIZE * 2,
-                                      self.game.MAP_SIZE[3] -
+                                      self.game.MAP_SIZE.height -
                                       self.game.TILE_SIZE * 2)]
 
         self.hide_timer = pygame.time.get_ticks()
@@ -1036,13 +1033,13 @@ class Bonus(pygame.sprite.Sprite):
                 return
 
     def activate_bonus(self, player):
+        player.earn_points(self)
         if self.bonus in ['t', 's', 'h', 'p']:
             player.activate_bonus(self.bonus)
         elif self.bonus in ['c', 'g']:
             self.game.bot_manager.activate_bonus(self.bonus)
         elif self.bonus in ['sh']:
             self.game.eagle.activate_bonus(self.bonus)
-        PointsAnim(self.game, self.points, self.rect)
         self.kill()
 
 
