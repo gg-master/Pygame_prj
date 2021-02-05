@@ -133,17 +133,17 @@ class Player(pygame.sprite.Sprite):
         if self.game.map.check_collide(self.rect) or c:
             self.rect = self.rect.move(-speed[0], -speed[1])
 
-    def move(self, keystate, obj):
-        if keystate[pygame.key.key_code(obj['up'])]:
+    def move(self, action):
+        if 'forward' in action:
             self.move_collide('t', (0, -self.speed))
-        elif keystate[pygame.key.key_code(obj['down'])]:
+        elif 'back' in action:
             self.move_collide('b', (0, self.speed))
-        elif keystate[pygame.key.key_code(obj['left'])]:
+        elif 'left' in action:
             self.move_collide('l', (-self.speed, 0))
-        elif keystate[pygame.key.key_code(obj['right'])]:
+        elif 'right' in action:
             self.move_collide('r', (self.speed, 0))
 
-    def update(self, *args):
+    def update(self, *args, keystate=None):
         if self.hidden:
             self.image = self.none_image
             return
@@ -152,14 +152,10 @@ class Player(pygame.sprite.Sprite):
             self.spawn_stopper = False
 
         # TODO При игре по сети необходимо как то получать нажатые клавиши
-        keystate = pygame.key.get_pressed()
-        if self.player == 1:
-            obj = PLAYER1
-        else:
-            obj = PLAYER2
+        actions = keystate[self.player]
 
-        self.move(keystate, obj)
-        if keystate[pygame.key.key_code(obj['shoot'])]:
+        self.move(actions)
+        if 'shoot' in actions:
             self.shoot()
 
     def shoot(self):
@@ -995,7 +991,7 @@ class Bonus(pygame.sprite.Sprite):
         self.game = game
         self.points = 500
         self.bonus = choice(available_bonuses)
-        self.bonus = 'p'
+        # self.bonus = 'p'
         self.image = load_image(f"{DIR_FOR_TANKS_IMG}"
                                 f"bonus\\{self.images[self.bonus]}")
         k = ((3 * self.game.TILE_SIZE) // 4) // self.image.get_rect().width

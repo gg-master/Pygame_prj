@@ -4,35 +4,15 @@
     "effects": 69.2,
     "first_player_nick": "Player1",
     "second_player_nick": "Player2",
-    "forward_move_btn_1": {
-      "w": 119
-    },
-    "forward_move_btn_2": {
-      "up": 273
-    },
-    "back_move_btn_1": {
-      "s": 115
-    },
-    "back_move_btn_2": {
-      "down": 274
-    },
-    "left_move_btn_1": {
-      "a": 97
-    },
-    "left_move_btn_2": {
-      "left": 276
-    },
-    "right_move_btn_1": {
-      "d": 100
-    },
-    "right_move_btn_2": {
-      "right": 275
-    },
-    "shoot_btn_1": {
-      "space": 32
-    },
-    "shoot_btn_2": {
-      "[0]": 256
-    }
+    "forward_move_btn_1": "w",
+    "forward_move_btn_2": "up",
+    "back_move_btn_1": "s",
+    "back_move_btn_2": "down",
+    "left_move_btn_1": "a",
+    "left_move_btn_2": "left",
+    "right_move_btn_1": "d",
+    "right_move_btn_2": "right",
+    "shoot_btn_1": "space",
+    "shoot_btn_2": "keypad 0"
   }
 }

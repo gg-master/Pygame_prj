@@ -4,7 +4,7 @@ import os
 from math import ceil
 from modules.sprites import Player, Bot, Eagle, Wall, EmptyBot
 from default_funcs import load_image
-
+import json
 
 """
 Карта должна содержать минимум эти слои.
@@ -479,7 +479,7 @@ class Game:
         x, y = tile.x / self.map.koeff + OFFSET, tile.y / self.map.koeff + OFFSET
         return Eagle(self, x, y, self.TILE_SIZE)
 
-    def update(self, events=None):
+    def update(self, events=None, keystate=None):
         if events is not None:
             if events.type == pygame.KEYDOWN:
                 if events.key == pygame.K_p:
@@ -488,7 +488,7 @@ class Game:
             if self.isGameOver:
                 self.game_over()
             # if not self.isGameOver:
-            self.player_group.update(events)
+            self.player_group.update(events, keystate=keystate)
             self.bullets.update()
             self.wall_group.update()
             self.bot_manager.update(events)
@@ -539,13 +539,45 @@ class Game:
             # self.__init__(self.type_game, self.level + 1, self.screen)
 
 
+class Client:
+    def __init__(self, count_players, type_game, screen):
+        self.game = Game(count_players, type_game, screen)
+        with open('settings.json') as settings_file:
+            self.settings = json.load(settings_file)
+        self.pl_settings = self.settings['player_settings']
+        import pprint
+        pprint.pprint(self.settings)
+
+    def update(self, *args):
+        keystate = self.get_key_state()
+        self.game.update(*args, keystate=keystate)
+
+    def render(self):
+        self.game.render()
+
+    def get_key_state(self):
+        keystate = pygame.key.get_pressed()
+        arr_state = {1: [], 2: []}
+        for name_button in ['back_move_btn_1', 'back_move_btn_2',
+                            'forward_move_btn_1', 'forward_move_btn_2',
+                            'left_move_btn_1', 'left_move_btn_2',
+                            'right_move_btn_1', 'right_move_btn_2',
+                            'shoot_btn_1', 'shoot_btn_2']:
+            name = self.pl_settings[name_button]
+            if keystate[pygame.key.key_code(name)]:
+                action, player = name_button.split('_')[0],\
+                                 int(name_button.split('_')[-1])
+                arr_state[player].append(action)
+        return arr_state
+
+
 fullscreen = False
 
 
 if __name__ == '__main__':
     clock = pygame.time.Clock()
     running = True
-    game = Game(2, 1, screen)
+    client = Client(1, 1, screen)
     while running:
         screen.fill(pygame.Color('black'))
         for event in pygame.event.get():
@@ -556,7 +588,6 @@ if __name__ == '__main__':
                     screen = pygame.display.set_mode((event.w, event.h),
                                                      pygame.RESIZABLE)
             if event.type == pygame.KEYDOWN:
-                # print(pygame.key.name(event.key))
                 if event.key == pygame.K_f:
                     fullscreen = not fullscreen
                     if fullscreen:
@@ -566,9 +597,9 @@ if __name__ == '__main__':
                         screen = pygame.display.set_mode(
                             (screen.get_width(), screen.get_height()),
                             pygame.RESIZABLE)
-            game.update(event)
-        game.update()
-        game.render()
+            client.update(event)
+        client.update()
+        client.render()
 
         pygame.display.flip()
         clock.tick(FPS)
