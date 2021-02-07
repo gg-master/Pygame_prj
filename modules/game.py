@@ -3,8 +3,8 @@ import pygame
 import os
 from math import ceil
 from modules.sprites import Player, Bot, Eagle, Wall, EmptyBot
-from default_funcs import load_image
-import json
+from default_funcs import load_image, load_settings
+
 
 """
 Карта должна содержать минимум эти слои.
@@ -19,56 +19,20 @@ trees - layer - tiles
 """
 
 MAPDIR = 'data\\maps\\'
-WORLDIMG_DIR = 'world\\'
 DIR_FOR_TANKS_IMG = 'tanks_texture\\'
-WIDTH, HEIGHT = 950, 750
+
 MAP_SIZE = 650
 OFFSET = 50
-FPS = 60
 
 TILE_FOR_PLAYERS = 16
 TILE_FOR_MOBS = 17
 
-pygame.init()
-screen = pygame.display.set_mode((WIDTH, HEIGHT), pygame.RESIZABLE)
-monitor_size = [pygame.display.Info().current_w,
-                pygame.display.Info().current_h]
-background = pygame.Surface((WIDTH, HEIGHT))
 
-# Загрузка всей игровой графики
-# img_dir = path.join(path.dirname(__file__),
-#                     'E:/')
-# powerup_images = dict()
-# powerup_images['shield'] = \
-#     pygame.image.load(path.join(img_dir,
-#                                 'E:/Game on Python/SpaceShooterRedux'
-#                                 '/PNG/Power-ups/shield_gold.png')).convert()
-# powerup_images['gun'] = \
-#     pygame.image.load(path.join(img_dir, 'E:/Game on Python/'
-#                                          'SpaceShooterRedux/PNG/'
-#                                          'Power-ups/bolt_gold.png')).convert()
-#
-# background = \
-#     pygame.image.load(path.join(img_dir,
-#                                 'Backgrounds/darkPurple.png')).convert()
-# background = pygame.transform.scale(background, (WIDTH, HEIGHT))
-# background_rect = background.get_rect(center=(WIDTH // 2, HEIGHT // 2))
-#
-# player_img = pygame.image.load(path.join(img_dir,
-#                                          "PNG/playerShip1_red.png")).convert()
-# player_mini_img = pygame.transform.scale(player_img, (35, 29))
-# player_mini_img.set_colorkey(BLACK)
-# # pictures for meteors
-# meteor_list = []
-# for m_i in ["PNG/Meteors/meteorBrown_med1.png",
-#             "PNG/Meteors/meteorBrown_big1.png",
-#             "PNG/Meteors/meteorGrey_med1.png"]:
-#     meteor_list.append(pygame.image.load(path.join(img_dir, m_i)).convert())
-#
-# # pictures for bullet
-# bullet_img = \
-#     pygame.image.load(path.join(img_dir,
-#                                 "PNG/Lasers/laserRed16.png")).convert()
+def set_constans_from_settings():
+    global MAP_SIZE, OFFSET
+    settings = load_settings()['game_settings']
+    MAP_SIZE = settings['MAP_SIZE']
+    OFFSET = settings['OFFSET']
 
 
 def convert_coords(x, tile_size):
@@ -114,6 +78,7 @@ class BotManager:
         self.types_tanks = ['t1', 't2', 't3', 't4']
         self.real_time_counter = [0, self.get_type()]
         self.visible_bots = 4 if self.player_count == 1 else 6
+        # Устанавливаем клетки для спавна ботов
         self.free_tiles_for_spawn = self.game.TILES_FOR_MOBS
 
         self.bonus_timer = None
@@ -121,9 +86,11 @@ class BotManager:
         self.bonus_name = None
 
     def get_count_bots(self):
+        # Возвращает оставшееся количество незаспавненных ботов
         return self.global_count_bots
 
     def check_state(self):
+        # Если все боты убиты, то игрок победил
         if len(self.game.mobs_group) <= 0 and self.global_count_bots <= 0:
             return True
         return False
@@ -140,10 +107,12 @@ class BotManager:
                 now - self.start_time > self.respawn_time and \
                 len(self.game.mobs_group) < 4 and self.global_count_bots > 0:
             tile = self.get_tile()
+            # Если клетка для спавна свободна, то спавним бота
             if tile:
                 Bot(self.game, tile,
                     self.game.TILE_SIZE, self.get_type_tank(),
                     sum(self.bot_comb) - self.global_count_bots)
+                # Обновляем таймер спавна
                 self.start_time = now
 
         # Проверяем на периоды и устанавливаем цели.
@@ -157,10 +126,11 @@ class BotManager:
             self.set_target_for_bots(None)  # None
             # Этот таймер как раз таки и помогает реализовать цикличность
             self.period_timer = now
-
+        # Обновляем состояние всех ботов
         self.game.mobs_group.update(events)
 
     def get_type(self):
+        # Возвращает следующий тип бота
         for i in range(len(self.bot_comb)):
             if self.bot_comb[i]:
                 return self.types_tanks[i]
@@ -187,6 +157,7 @@ class BotManager:
     def get_tile(self):
         from random import choice
         # Рандомно выбираем место для спавна бота
+        # Если место для спавна занять, то мы не можем заспавнить бота
         tile = choice(self.free_tiles_for_spawn)
         em = EmptyBot(tile[0], tile[1],
                       self.game.TILE_SIZE, self.game.TILE_SIZE)
@@ -202,6 +173,7 @@ class BotManager:
 
     def activate_bonus(self, name_bonus):
         # name_bonus = 'c' - clock, 'g'
+        # Устанавливаем бонусы
         if name_bonus == 'c':
             for i in self.game.mobs_group:
                 i.isFreeze = True
@@ -213,12 +185,15 @@ class BotManager:
                 i.kill(permanent=True)
 
     def check_bonuses(self):
+        # Обновляем счетчик для бонусов
         now = pygame.time.get_ticks()
         if self.bonus_timer is not None:
             if now - self.bonus_timer > self.bonus_delay:
+                # Если время действия бонуса закончилось, убираем счетчик
                 self.bonus_timer = None
                 self.bonus_delay = None
                 if self.bonus_name == 'c':
+                    # Если выпал бонус часы, то всех нужно и разморозить
                     for i in self.game.mobs_group:
                         i.isFreeze = False
                     self.bonus_name = None
@@ -231,13 +206,15 @@ class Map:
         # настроить доступ к файлу
         if os.getcwd().split('\\')[-1] == 'modules':
             os.chdir('..')
-
+        # Загружаем уровень. Если нужного уровня не найдено, то
+        # загружаем первый уровень
         self.level = number_level
         path = f'{MAPDIR}map{self.level}.tmx'
         if not os.path.isfile(path):
             self.level = 1
             path = f'{MAPDIR}map{self.level}.tmx'
         self.map = pytmx.load_pygame(os.path.join(os.getcwd(), path))
+        # Размер клетки
         self.TILE_SIZE = map_size // self.map.width
         # Ширина и выстоа это количество клеток на карте
         self.width = self.map.width
@@ -260,6 +237,7 @@ class Map:
                 raise Exception(f'В карте не обнаружены необходимые слои: {i}')
 
     def get_tile_image(self, x, y, layer):
+        # Получение картинки тайла с изменнеными пропорциями
         image = self.map.get_tile_image(x, y, layer)
         if image is not None:
             image = pygame.transform.scale(image,
@@ -267,9 +245,11 @@ class Map:
             return image
 
     def get_objects(self, name):
+        # Получаем названием обектов из объекта карты
         return self.map.layernames[name]
 
     def get_tile_id(self, gid):
+        # Получаем id клетки по gid
         return self.map.tiledgidmap[gid]
 
     def get_tiled_by_id(self, id):
@@ -314,35 +294,37 @@ class Menu(pygame.sprite.Sprite):
     images = {
         'bots': 'bots.png',
         'flag': 'level_flag.png',
-        'p1': 'p1.png',
-        'p2': 'p2.png',
+        'p1': 'p1_v1.png',
+        'p2': 'p2_v1.png',
         'pl': 'players.png'
     }
 
     def __init__(self, game):
         super().__init__(game.all_sprites)
+        # Можно подключить какой-нибудь стиль для текста
         self.text_font = None
         self.game = game
+        # Создаем разметку меню
         delta_x, delta_y = 30, self.game.MAP_SIZE.y
         self.rect = pygame.Rect(game.MAP_SIZE.width + delta_x, delta_y,
-                                game.TILE_SIZE * 2, game.MAP_SIZE.height)
+                                game.TILE_SIZE * 3, game.MAP_SIZE.height)
+        # Вычисляем коэффейиенты для отрисовки
         self.m1 = self.game.TILE_SIZE / 2.8
         self.m2 = self.game.TILE_SIZE / 2
         self.m3 = self.game.TILE_SIZE
-
+        # Подключаем все необходимые картики для отображение в меню
         self.bot_img = self.load_image('bots', self.m1)
         self.p = self.load_image('pl', self.m2)
         self.flag = self.load_image('flag', self.m3)
-        self.p1 = self.load_image('p1', self.m2)
-        self.p2 = None
-        self.is_two_pl = True if self.game.type_game == 2 else False
-        if self.is_two_pl:
-            self.p2 = self.load_image('p2', self.m2)
+        # Если в игре участвуют два игрока, то необходимо
+        # отрисовать количество жизней и у второго игрока
+        self.is_two_pl = True if self.game.player2 is not None else False
 
         self.image = pygame.Surface((self.rect.width, self.rect.height),
                                     pygame.SRCALPHA, 32)
 
     def load_image(self, name, m):
+        # Загрузка изображений менюшек
         image = load_image(f"{DIR_FOR_TANKS_IMG}\\menu\\{self.images[name]}")
         rect = image.get_rect()
         koeff = m / rect.height
@@ -350,6 +332,7 @@ class Menu(pygame.sprite.Sprite):
                                               ceil(rect.height * koeff)))
 
     def draw_bots_log(self):
+        # Отрисовка количества оставшихся ботов
         count_bots = self.game.bot_manager.get_count_bots()
         x, y, w, h = self.bot_img.get_rect()
         org_x, c = x, 0
@@ -364,52 +347,65 @@ class Menu(pygame.sprite.Sprite):
             y += h + 4
 
     def draw_players_log(self):
+        # Отрисовка информации об игроках и номер уровня
         x = 0
         y = self.rect.height // 2
         font = pygame.font.Font(self.text_font, int(self.m3))
+        f_nick = pygame.font.Font(self.text_font, int(self.m3 / 1.3))
+        # Узнаем количество жизней у игроков
         p1_lives = font.render(f"{self.game.player1.lives}", True,
                                pygame.Color('black'))
+
         p2_lives = font.render(f"{self.game.player2.lives}", True,
                                pygame.Color('black')) \
             if self.is_two_pl else None
+        # Узнаем ники игроков
+        p1_nick = f_nick.render(f"{self.game.pl_sett['first_player_nick']}",
+                                True, pygame.Color('black'))
+        p2_nick = f_nick.render(f"{self.game.pl_sett['second_player_nick']}",
+                                True, pygame.Color('black'))
+
         level_text = font.render(f"{self.game.level}", True,
                                  pygame.Color('black'))
-
-        pl_rect = self.p1.get_rect()
-        self.image.blit(self.p1, (x, y, pl_rect.width, pl_rect.height))
-
-        x, y = 0, y + pl_rect.height + 4
+        # Отрисовка ника игрока
+        p_n_rect = p1_nick.get_rect()
+        self.image.blit(p1_nick, (x, y, p_n_rect.width, p_n_rect.height))
+        # Отрисовка мини-танчика игрока
+        x, y = 0, y + p_n_rect.height + 6
         p_rc = self.p.get_rect()
         self.image.blit(self.p, (x, y, p_rc.width, p_rc.height))
-
-        x, y = p_rc.width + 4, y
+        # Отрисовка жизни у первого игрока
+        x, y = p_rc.width + 8, y - 3
         pl_lv = p1_lives.get_rect()
         self.image.blit(p1_lives, (x, y,
                                    pl_lv.width, pl_lv.height))
-
+        # Если игра на двоих
         if self.is_two_pl:
             x, y = 0, y + pl_lv.height + 10
-            pl_rect = self.p2.get_rect()
-            self.image.blit(self.p2, (x, y, pl_rect.width, pl_rect.height))
-
-            x, y = 0, y + pl_rect.height + 4
+            # Отрисовка ника второго игрока
+            p_n_rect = p2_nick.get_rect()
+            self.image.blit(p2_nick, (x, y, p_n_rect.width, p_n_rect.height))
+            # Отрисовка мини-танчика игрока
+            x, y = 0, y + p_n_rect.height + 6
             p_rc = self.p.get_rect()
             self.image.blit(self.p, (x, y, p_rc.width, p_rc.height))
-
-            x, y = p_rc.width + 4, y
+            # Отрисовка жизней второго игрока
+            x, y = p_rc.width + 8, y - 3
             pl_lv = p2_lives.get_rect()
             self.image.blit(p2_lives, (x, y,
                                        pl_lv.width, pl_lv.height))
-
+        # Отрисовка флага
         fl_rc = self.flag.get_rect()
         x, y = 0, self.rect.height - fl_rc.height * 3
         self.image.blit(self.flag, (x, y, fl_rc.width, fl_rc.height))
-
+        # Отрисовка номера уровня
         x, y = x + fl_rc.width // 2, y + fl_rc.height // 1.5
         lev_rect = level_text.get_rect()
         self.image.blit(level_text, (x, y, lev_rect.width, lev_rect.height))
 
     def update(self, *args):
+        # Обновление окна меню
+        self.is_two_pl = True if self.game.player2 is not None else False
         self.image.fill(pygame.SRCALPHA)
         self.draw_bots_log()
         self.draw_players_log()
@@ -417,6 +413,8 @@ class Menu(pygame.sprite.Sprite):
 
 class Game:
     def __init__(self, type_game, number_level, screen_surf):
+        set_constans_from_settings()
+
         self.map = Map(number_level, MAP_SIZE)
         self.map_object = self.map.map
         self.TILE_SIZE = self.map.TILE_SIZE
@@ -424,7 +422,9 @@ class Game:
                                     MAP_SIZE + OFFSET, MAP_SIZE + OFFSET)
         self.type_game = type_game
         self.level = self.map.level
+        self.track_list = []
 
+        self.pl_sett = load_settings()['player_settings']
         self.screen = screen_surf
         self.isGameOver = False
         self.isWin = False
@@ -467,6 +467,8 @@ class Game:
         self.menu = Menu(self)
 
     def create_walls(self):
+        # Если на карте есть стены, то мы должны их создать в
+        # качестве объектов и добавить в группу стен
         if not self.map.check_('walls'):
             return
         for i in self.map.get_objects('walls'):
@@ -475,16 +477,21 @@ class Game:
             wall.add(self.all_sprites, self.wall_group, self.map_group)
 
     def create_eagle(self):
+        # Создаем объект орла
         tile = self.map.get_objects('eagle')[0]
         x, y = tile.x / self.map.koeff + OFFSET, tile.y / self.map.koeff + OFFSET
         return Eagle(self, x, y, self.TILE_SIZE)
 
     def update(self, events=None, keystate=None):
+        # Обновляем каждый элемент в игре
         if events is not None:
+            # Если нажали кнопку паузы, то необходимо
+            # остановить обновление объектов игры
             if events.type == pygame.KEYDOWN:
                 if events.key == pygame.K_p:
                     self.is_pause = not self.is_pause
         if not self.is_pause:
+            # Если игра проиграна, то необходимо отрисовать окно проигрыша
             if self.isGameOver:
                 self.game_over()
             # if not self.isGameOver:
@@ -495,7 +502,7 @@ class Game:
             self.bonus_group.update()
             self.animation_sprite.update()
             self.menu.update()
-
+            # Проверка проиграна ли игра или выйграна
             self.is_game_over()
         else:
             # TODO Реализовать окно паузы
@@ -513,15 +520,17 @@ class Game:
 
         self.screen.fill(pygame.Color(115, 117, 115))
         # Отрисовка земли
-        self.map.render_layer(screen, 'ground')
+        self.map.render_layer(self.screen, 'ground')
         # render player and bullet and mobs
-        self.all_sprites.draw(screen)
+        self.all_sprites.draw(self.screen)
         # Отрисовка деревьев
-        self.map.render_layer(screen, 'trees')
-        self.bonus_group.draw(screen)
-        self.animation_sprite.draw(screen)
+        self.map.render_layer(self.screen, 'trees')
+        self.bonus_group.draw(self.screen)
+        self.animation_sprite.draw(self.screen)
 
     def is_game_over(self):
+        # Если иничтожены все боты-враги, то игры выйграна
+        # Если все жизни игрока потрачены или уничтожен орел, то игра проиграна
         if not self.isGameOver:
             if self.bot_manager.check_state():
                 self.isWin = True
@@ -538,69 +547,11 @@ class Game:
             # TODO Заготовка для будущей смены карты
             # self.__init__(self.type_game, self.level + 1, self.screen)
 
+    def add_music_track(self, name):
+        # TODO обавление музыки в список для воспроизведения
+        self.track_list.append(name)
 
-class Client:
-    def __init__(self, count_players, type_game, screen):
-        self.game = Game(count_players, type_game, screen)
-        with open('settings.json') as settings_file:
-            self.settings = json.load(settings_file)
-        self.pl_settings = self.settings['player_settings']
-        import pprint
-        pprint.pprint(self.settings)
-
-    def update(self, *args):
-        keystate = self.get_key_state()
-        self.game.update(*args, keystate=keystate)
-
-    def render(self):
-        self.game.render()
-
-    def get_key_state(self):
-        keystate = pygame.key.get_pressed()
-        arr_state = {1: [], 2: []}
-        for name_button in ['back_move_btn_1', 'back_move_btn_2',
-                            'forward_move_btn_1', 'forward_move_btn_2',
-                            'left_move_btn_1', 'left_move_btn_2',
-                            'right_move_btn_1', 'right_move_btn_2',
-                            'shoot_btn_1', 'shoot_btn_2']:
-            name = self.pl_settings[name_button]
-            if keystate[pygame.key.key_code(name)]:
-                action, player = name_button.split('_')[0],\
-                                 int(name_button.split('_')[-1])
-                arr_state[player].append(action)
-        return arr_state
-
-
-fullscreen = False
-
-
-if __name__ == '__main__':
-    clock = pygame.time.Clock()
-    running = True
-    client = Client(1, 1, screen)
-    while running:
-        screen.fill(pygame.Color('black'))
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                running = False
-            if event.type == pygame.VIDEORESIZE:
-                if not fullscreen:
-                    screen = pygame.display.set_mode((event.w, event.h),
-                                                     pygame.RESIZABLE)
-            if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_f:
-                    fullscreen = not fullscreen
-                    if fullscreen:
-                        screen = pygame.display.set_mode(monitor_size,
-                                                         pygame.FULLSCREEN)
-                    else:
-                        screen = pygame.display.set_mode(
-                            (screen.get_width(), screen.get_height()),
-                            pygame.RESIZABLE)
-            client.update(event)
-        client.update()
-        client.render()
-
-        pygame.display.flip()
-        clock.tick(FPS)
-    pygame.quit()
+    def get_track_list(self):
+        tr_ls = self.track_list.copy()
+        self.track_list.clear()
+        return tr_ls

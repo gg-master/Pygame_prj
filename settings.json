@@ -14,5 +14,10 @@
     "right_move_btn_2": "right",
     "shoot_btn_1": "space",
     "shoot_btn_2": "keypad 0"
+  },
+  "game_settings": {
+    "SIZE_SCREEN": "None",
+    "MAP_SIZE": 650,
+    "OFFSET": 50
   }
 }

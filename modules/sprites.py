@@ -59,6 +59,7 @@ class Player(pygame.sprite.Sprite):
 
     def spawn(self):
         self.type_tanks = 't1'
+        self.side = 't'
         self.set_properties()
         self.hidden = True
         self.with_shield = True
@@ -163,6 +164,7 @@ class Player(pygame.sprite.Sprite):
         if now - self.last_shot > self.shoot_delay:
             self.last_shot = now
             if self.bullet is None or not self.bullet.alive():
+                self.game.add_music_track('shoot_player')
                 bullet = Bullet(self.rect, self.side, self.game, self,
                                 speed=self.bullet_speed)
                 bullet.add(self.game.all_sprites, self.game.bullets)
@@ -617,6 +619,7 @@ class Bot(pygame.sprite.Sprite):
             if self.can_shoot and (self.bullet is None or
                                    not self.bullet.alive()):
                 if random() < 1 / 10 or self.compare_rect() or custom:
+                    self.game.add_music_track('shoot_bot')
                     bullet = Bullet(self.rect, self.side, self.game, self,
                                     speed=self.bullet_speed)
                     bullet.add(self.game.all_sprites, self.game.bullets)
