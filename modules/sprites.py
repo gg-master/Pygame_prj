@@ -100,9 +100,9 @@ class Player(pygame.sprite.Sprite):
         image = load_image(f'{DIR_FOR_TANKS_IMG}{self.type_tanks}\\'
                            f'{self.images[name_img]}')
         self.image = pygame.transform.scale(image, (self.TILE_SIZE -
-                                                    self.TILE_SIZE // 8,
+                                                    self.TILE_SIZE // 7,
                                                     self.TILE_SIZE -
-                                                    self.TILE_SIZE // 8))
+                                                    self.TILE_SIZE // 7))
         s = pygame.Surface((self.image.get_rect().width,
                             self.image.get_rect().height), pygame.SRCALPHA)
         s.fill(pygame.color.Color('black'))
@@ -534,6 +534,9 @@ class Bot(pygame.sprite.Sprite):
                 is_empty = self.check_pos_by_emptbot(self.prev_side)
                 if is_empty:
                     if self.side == pref_side:
+                        return False
+                    if self.side == anti_side[self.prev_side]:
+                        self.side = pref_side
                         return True
                     # print(self.side, self.prev_side, pref_side)
                     s = self.side
