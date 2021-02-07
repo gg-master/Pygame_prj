@@ -490,6 +490,7 @@ class Game:
             if events.type == pygame.KEYDOWN:
                 if events.key == pygame.K_p:
                     self.is_pause = not self.is_pause
+            return
         if not self.is_pause:
             # Если игра проиграна, то необходимо отрисовать окно проигрыша
             if self.isGameOver:

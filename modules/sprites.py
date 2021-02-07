@@ -533,18 +533,13 @@ class Bot(pygame.sprite.Sprite):
             if self.sides_flags[self.available_side.index(pref_side)]:
                 is_empty = self.check_pos_by_emptbot(self.prev_side)
                 if is_empty:
-                    if self.prev_side in ['t', 'b']:
-                        if self.side in ['r', 'l']:
-                            s = self.side
-                            self.side = self.prev_side
-                            self.prev_side = anti_side[s]
-                            return False
-                    elif self.prev_side in ['r', 'l']:
-                        if self.side in ['b', 't']:
-                            s = self.side
-                            self.side = self.prev_side
-                            self.prev_side = anti_side[s]
-                            return False
+                    if self.side == pref_side:
+                        return True
+                    # print(self.side, self.prev_side, pref_side)
+                    s = self.side
+                    self.side = self.prev_side
+                    self.prev_side = anti_side[s]
+                    return False
             elif not self.sides_flags[self.available_side.index(pref_side)]:
                 return True
         return False
@@ -602,6 +597,7 @@ class Bot(pygame.sprite.Sprite):
         if self.target is None:
             just_drive()
         if self.target == 'players':
+            # print('------')
             if any(map(lambda x: x.alive(), self.game.player_group)):
                 # Узнаем позицию цели
                 players_rect = self.get_nearest_players()

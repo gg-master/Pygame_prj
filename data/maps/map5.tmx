@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<map version="1.4" tiledversion="1.4.3" orientation="orthogonal" renderorder="right-down" width="13" height="13" tilewidth="80" tileheight="80" infinite="0" nextlayerid="6" nextobjectid="69">
+<map version="1.4" tiledversion="1.4.3" orientation="orthogonal" renderorder="right-down" width="13" height="13" tilewidth="80" tileheight="80" infinite="0" nextlayerid="6" nextobjectid="111">
  <tileset firstgid="1" source="tileds.tsx"/>
  <layer id="1" name="ground" width="13" height="13">
   <data encoding="base64" compression="zlib">
@@ -13,7 +13,7 @@
  </layer>
  <layer id="3" name="spawn_bots" width="13" height="13">
   <data encoding="base64" compression="zlib">
-   eJxjYBgFAw0EoXgwAoGBdgAQAAAw4AAz
+   eJxjYBg6QHCgHTACgcBAOwAIACxcACI=
   </data>
  </layer>
  <objectgroup id="4" name="walls">
@@ -47,25 +47,6 @@
   <object id="34" gid="11" x="640" y="480" width="80" height="80"/>
   <object id="35" gid="11" x="560" y="400" width="80" height="80"/>
   <object id="36" gid="11" x="480" y="320" width="80" height="80"/>
-  <object id="37" gid="11" x="400" y="480" width="80" height="80"/>
-  <object id="38" gid="11" x="320" y="480" width="80" height="80"/>
-  <object id="39" gid="11" x="240" y="480" width="80" height="80"/>
-  <object id="40" gid="11" x="160" y="480" width="80" height="80"/>
-  <object id="41" gid="11" x="80" y="480" width="80" height="80"/>
-  <object id="42" gid="11" x="0" y="480" width="80" height="80"/>
-  <object id="43" gid="11" x="0" y="400" width="80" height="80"/>
-  <object id="44" gid="11" x="0" y="320" width="80" height="80"/>
-  <object id="45" gid="11" x="160" y="320" width="80" height="80"/>
-  <object id="46" gid="11" x="160" y="240" width="80" height="80"/>
-  <object id="47" gid="11" x="0" y="240" width="80" height="80"/>
-  <object id="48" gid="11" x="0" y="160" width="80" height="80"/>
-  <object id="49" gid="11" x="80" y="80" width="80" height="80"/>
-  <object id="50" gid="11" x="160" y="80" width="80" height="80"/>
-  <object id="51" gid="11" x="240" y="80" width="80" height="80"/>
-  <object id="52" gid="11" x="240" y="240" width="80" height="80"/>
-  <object id="53" gid="11" x="320" y="240" width="80" height="80"/>
-  <object id="54" gid="11" x="320" y="80" width="80" height="80"/>
-  <object id="55" gid="11" x="400" y="240" width="80" height="80"/>
   <object id="56" gid="11" x="480" y="240" width="80" height="80"/>
   <object id="57" gid="11" x="480" y="160" width="80" height="80"/>
   <object id="58" gid="11" x="640" y="80" width="80" height="80"/>
@@ -79,6 +60,22 @@
   <object id="66" gid="11" x="960" y="400" width="80" height="80"/>
   <object id="67" gid="11" x="800" y="240" width="80" height="80"/>
   <object id="68" gid="11" x="800" y="320" width="80" height="80"/>
+  <object id="78" gid="13" x="240" y="480" width="80" height="80"/>
+  <object id="79" gid="13" x="320" y="480" width="80" height="80"/>
+  <object id="80" gid="13" x="400" y="480" width="80" height="80"/>
+  <object id="92" gid="13" x="240" y="240" width="80" height="80"/>
+  <object id="93" gid="13" x="320" y="240" width="80" height="80"/>
+  <object id="94" gid="13" x="400" y="240" width="80" height="80"/>
+  <object id="95" gid="13" x="400" y="320" width="80" height="80"/>
+  <object id="97" gid="13" x="160" y="480" width="80" height="80"/>
+  <object id="98" gid="13" x="80" y="480" width="80" height="80"/>
+  <object id="99" gid="13" x="400" y="400" width="80" height="80"/>
+  <object id="100" gid="13" x="80" y="400" width="80" height="80"/>
+  <object id="101" gid="13" x="80" y="320" width="80" height="80"/>
+  <object id="102" gid="13" x="80" y="240" width="80" height="80"/>
+  <object id="103" gid="13" x="80" y="160" width="80" height="80"/>
+  <object id="109" gid="13" x="160" y="160" width="80" height="80"/>
+  <object id="110" gid="13" x="240" y="160" width="80" height="80"/>
  </objectgroup>
  <objectgroup id="5" name="eagle">
   <object id="1" gid="14" x="0" y="1040" width="80" height="80"/>
