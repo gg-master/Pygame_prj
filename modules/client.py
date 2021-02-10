@@ -17,13 +17,13 @@ SOUND_DIR = 'data\\music\\'
 
 
 class MusicPlayer:
-    music = {
-        'shoot_player': 'shoot_1.wav',
-        'shoot_bot': 'shoot_2.wav',
-        'explosion_bullet_1': '',
-        'explosion_bullet_2': '',
-        'explosion_tank_1': '',
-        'explosion_tank_2': ''
+    sound = {
+        'shoot_player': 'shoot_sound\\shoot_1.wav',
+        'shoot_bot': 'shoot_sound\\shoot_2.wav',
+        'expl_b1': '',
+        'expl_b2': '',
+        'expl_t1': '',
+        'expl_t2': ''
     }
 
     def __init__(self, settings):
@@ -34,19 +34,24 @@ class MusicPlayer:
     def load_sounds(self):
         if os.getcwd().split('\\')[-1] == 'modules':
             os.chdir('..')
-        for name in self.music:
-            if not self.music[name]:
+        for name in self.sound:
+            if not self.sound[name]:
                 continue
-            self.music[name] = pygame.mixer.Sound(
-                os.path.join(SOUND_DIR, self.music[name]))
-            self.music[name].set_volume(self.volume_effects / 100)
+            self.sound[name] = pygame.mixer.Sound(
+                os.path.join(SOUND_DIR, self.sound[name]))
+            self.sound[name].set_volume(self.volume_effects / 100)
 
     def play_list(self, track_list):
         for name_track in track_list:
-            if name_track in self.music:
-                self.music[name_track].play()
+            if name_track in self.sound:
+                self.sound[name_track].play()
             else:
                 print('track not found')
+
+    def update(self):
+        pass
+
+#  TODO при постановке игры на пазу, необходимо всю музыку поставить на паузу
 
 
 class Client:

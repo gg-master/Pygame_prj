@@ -1,14 +1,9 @@
 import pygame
-from settings import *
 from random import random, choice, randrange
 from default_funcs import load_image
 
 DIR_FOR_TANKS_IMG = 'tanks_texture\\'
 WORLDIMG_DIR = 'world\\'
-WIDTH, HEIGHT = 950, 750
-MAP_SIZE = 650
-OFFSET = 50
-FPS = 60
 
 
 class Player(pygame.sprite.Sprite):
@@ -241,8 +236,8 @@ class Bullet(pygame.sprite.Sprite):
                     self.kill()
                     c.kill()
             # Пуля врезалась в бота и при этом выстрел был от игрока
-            if c in self.game.mobs_group and \
-                    self.who_shoot.__class__.__name__ == 'Player':
+            if c in self.game.mobs_group and\
+                    isinstance(self.who_shoot, Player):
                 self.who_shoot.earn_points(c)
                 print(self.who_shoot.count_points)
                 c.kill()

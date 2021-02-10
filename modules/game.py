@@ -411,6 +411,36 @@ class Menu(pygame.sprite.Sprite):
         self.draw_players_log()
 
 
+class PauseScreen:
+    def __init__(self, game, screen):
+        self.game = game
+        self.pscreen = pygame.Surface((screen.get_rect().w,
+                                       screen.get_rect().h),
+                                      pygame.SRCALPHA, 32)
+        self.text_timer = pygame.time.get_ticks()
+        font = pygame.font.Font(None, 50)
+        self.text = font.render('PAUSE', False, (255, 255, 255, 255))
+
+    def update(self):
+        # Обновляем таймер для мигания текста
+        now = pygame.time.get_ticks()
+        if now - self.text_timer > 400:
+            self.text.set_alpha(0 if self.text.get_alpha() in [
+                None, 255] else 255)
+            self.text_timer = now
+
+    def render(self, screen):
+        # Затемняем основной экран
+        self.pscreen.fill((150, 150, 150, 100))
+        # Отрисовываем все необходимое
+        screen.blit(self.pscreen, (0, 0),
+                    special_flags=pygame.BLEND_RGBA_MULT)
+        screen.blit(self.text, (self.pscreen.get_rect().w // 2
+                                - self.text.get_rect().w // 2,
+                                self.pscreen.get_rect().h // 3
+                                - self.text.get_rect().h // 2))
+
+
 class Game:
     def __init__(self, type_game, number_level, screen_surf):
         set_constans_from_settings()
@@ -426,6 +456,8 @@ class Game:
 
         self.pl_sett = load_settings()['player_settings']
         self.screen = screen_surf
+        self.pause_screen = PauseScreen(self, self.screen)
+        self.pause_sc_timer = pygame.time.get_ticks()
         self.isGameOver = False
         self.isWin = False
         self.is_pause = False
@@ -506,8 +538,7 @@ class Game:
             # Проверка проиграна ли игра или выйграна
             self.is_game_over()
         else:
-            # TODO Реализовать окно паузы
-            pass
+            self.pause_screen.update()
 
     def render(self):
         # Отрисовка по слоям.
@@ -518,7 +549,6 @@ class Game:
         2. spawn_bots
         3. trees
         """
-
         self.screen.fill(pygame.Color(115, 117, 115))
         # Отрисовка земли
         self.map.render_layer(self.screen, 'ground')
@@ -528,6 +558,9 @@ class Game:
         self.map.render_layer(self.screen, 'trees')
         self.bonus_group.draw(self.screen)
         self.animation_sprite.draw(self.screen)
+
+        if self.is_pause:
+            self.pause_screen.render(self.screen)
 
     def is_game_over(self):
         # Если иничтожены все боты-враги, то игры выйграна
