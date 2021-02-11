@@ -505,8 +505,8 @@ class Game:
             return
         for i in self.map.get_objects('walls'):
             x, y = i.x / self.map.koeff + OFFSET, i.y / self.map.koeff + OFFSET
-            wall = Wall(x, y, self.map.get_tile_id(i.gid), self.TILE_SIZE)
-            wall.add(self.all_sprites, self.wall_group, self.map_group)
+            wall = Wall(x, y, self.map.get_tile_id(i.gid),
+                        self.TILE_SIZE, self)
 
     def create_eagle(self):
         # Создаем объект орла

@@ -2,11 +2,14 @@ import pygame
 from random import random, choice, randrange
 from default_funcs import load_image
 
+# Путь от корня проекта до текстур танков
 DIR_FOR_TANKS_IMG = 'tanks_texture\\'
+# Путь от корня проекта до текстур карты
 WORLDIMG_DIR = 'world\\'
 
 
 class Player(pygame.sprite.Sprite):
+    # Определение всех необходимых названий картинок для текстур танка
     images = {
         '1_t0': 't_y.png', '1_l0': 't_y_l.png', '1_r0': 't_y_r.png',
         '1_b0': 't_y_b.png',
@@ -39,32 +42,57 @@ class Player(pygame.sprite.Sprite):
         self.last_shot = pygame.time.get_ticks()
 
         self.hidden = self.with_shield = self.spawn_stopper = False
+        # После объявления некоторых параметров для танка игрока
+        # устанавливае значения для этип параметров в зависимости от типа танка
         self.set_properties()
-
+        # Размер клетки на поле
         self.TILE_SIZE = tile_size
         self.mask = self.image = None
+        # Загружаем маску и картинку танка
         self.load_tanks_image()
 
+        # Записываем начальные координаты
         self.coords = coords
+        # Создаем прямоугольних из картинки, для обработки передвижения
         self.rect = self.image.get_rect()
+        # Создаем прохрачную поверхность, которая будет отрисовываться
+        # вместо параметра self.image, для того, чтобы пользователь
+        # не видел танк на карте (к примеру при убийстве)
         self.none_image = pygame.Surface((self.rect.width, self.rect.height),
                                          pygame.SRCALPHA, 32)
+        # Сохраняем оригинальное изображение в другую
+        # переменную, чтобы не потерять оригинульную картинку
+        # игрока перед его "исчезновением с поля"
         self.orig_image = self.image.copy()
+        # Спавним игрока на карте
         self.spawn()
 
     def spawn(self):
+        # Сбрасываем все значения на начальные (тип танка, сторону)
+        # и обновляем свойста танка
         self.type_tanks = 't1'
         self.side = 't'
         self.set_properties()
+        # Прячем танк
         self.hidden = True
+        # Добавляем щит танку
         self.with_shield = True
+        # Пока проигрывается анимация появления танка, игрок не
+        # должен передвигаться по карте
         self.spawn_stopper = True
+        # Перемещаем игрока в начальные координаты
         self.rect.x = self.coords[0]
         self.rect.y = self.coords[1]
+        # Создаем щит и анимацию спавна
         Shield(self)
         SpawnAnim(self)
 
     def activate_bonus(self, name_bonus):
+        """
+        :param name_bonus: название бонуса, который надо активировать
+        :return: None: Только устанавливаем параметры в зависимости от бонуса
+        и выходим из функции ничего не вернув
+        """
         # name_bonus = 's' - star, 'h' - helmet, 't' - tank, 'p' - pistol
         if name_bonus == 's':
             self.type_tanks = f't{min(4, int(self.type_tanks[1]) + 1)}'
@@ -81,6 +109,10 @@ class Player(pygame.sprite.Sprite):
             self.set_properties()
 
     def set_properties(self):
+        """
+        В зависимости от типа танка устанавливаем свойста
+        :return: None: только изменение параметров объекта
+        """
         if self.type_tanks == 't1':
             self.speed = 2
         elif self.type_tanks == 't2':
@@ -90,10 +122,21 @@ class Player(pygame.sprite.Sprite):
             self.bullet_speed = 7
 
     def load_tanks_image(self):
+        """
+        Загрузка избражения танка
+        В зависимости от:
+            self.move_trigger - в каком положении сейчас гусеницы (1 или 2)
+            self.side, self.player, self.images[name_image]
+        :return:
+        """
+        # Движение гусениц
         self.move_trigger = not self.move_trigger
+        # Получение название картинки
         name_img = f"{self.player}_{self.side}{int(self.move_trigger)}"
+        # Загрузка картинки
         image = load_image(f'{DIR_FOR_TANKS_IMG}{self.type_tanks}\\'
                            f'{self.images[name_img]}')
+        # Изменение размера изображения под размер клетки
         self.image = pygame.transform.scale(image, (self.TILE_SIZE -
                                                     self.TILE_SIZE // 7,
                                                     self.TILE_SIZE -
@@ -104,32 +147,62 @@ class Player(pygame.sprite.Sprite):
         self.mask = pygame.mask.from_surface(s)
 
     def kill(self):
+        # Если у игрока не включен щит
         if not self.with_shield:
+            # Включаем анимацию взрыва танка
             Explosion(self)
+            # Если жизней не осталось, то убвиаем окончательно
             if self.lives <= 0:
                 super().kill()
                 return
+            # Если у игрока танк 4 типа, то у него есть 1 доп жизнь
+            # т.е такой танк может перенести 1 выстрел
             if self.type_tanks == 't4':
                 if self.bullet_prof:
                     self.bullet_prof = False
                     return
+            # Если у игрока еще остались жизни, то уменьшаем на 1 и
+            # запускаем спавн
             self.lives -= 1
             self.spawn()
 
     def move_collide(self, side: str, speed=(0, 0)):
+        """
+        Проверка может ли танк проехать в заданном направлении, если нет, то
+        он "откатывает назад"
+        :param side: сторона, в которую мы едем
+        :param speed: скорость, в зависимости от стороны в которую едем
+        :return: None: Только проверка может ли танк проехать в
+            заданном направлении
+        """
+        # Устанавливаем сторону и загружаем изображение танка для новой стороны
         self.side = side
         self.load_tanks_image()
+        # Передвигаем танк в заданном направлении
         self.rect = self.rect.move(speed[0], speed[1])
+        # Проверяем по маске пересекаемся ли мы с какимто физическим
+        # объектов на карте - танк, стена или орел
         c = pygame.sprite.spritecollide(self, self.game.map_group, False,
                                         pygame.sprite.collide_mask)
+        # Если пересекаемся с бонусом, то активируем его
         c_b = pygame.sprite.spritecollideany(self, self.game.bonus_group)
         c_b.activate_bonus(self) if c_b else None
-        del c[c.index(self)]
-        """За обработку столкновений с пулями отвечает сама пуля"""
+        del c[c.index(self)]  # Удаляем себя из списка
+        # Если список не пустой, или же если мы пересеклись с границой карты,
+        # то "отъезжаем назад"
         if self.game.map.check_collide(self.rect) or c:
             self.rect = self.rect.move(-speed[0], -speed[1])
 
     def move(self, action):
+        """
+        Передвижение игрока в необходимом направлении
+        :param action: список действий, который сформировался в зависимости от
+            нажатых клавиш
+        :return: None: обработка действий и перемещение танка в
+            заданом направлении
+        """
+        # Если "вперед" есть в дайствиях, то передвигаем танк вперед
+        # С другими направлениями идентично
         if 'forward' in action:
             self.move_collide('t', (0, -self.speed))
         elif 'back' in action:
@@ -140,37 +213,64 @@ class Player(pygame.sprite.Sprite):
             self.move_collide('r', (self.speed, 0))
 
     def update(self, *args, keystate=None):
+        """
+        Обновление состояния танка игрока
+        :param args: Аргументы типа event из цикла событий.
+            В данный момент не используется
+        :param keystate: Список нажатых клавиш
+        :return: None: Только обработка нажатий
+        """
+        # Если танк скрыт, то загружаем прозрачное изображение
         if self.hidden:
             self.image = self.none_image
             return
+        # Если танк не скрыт и мы еще не можем двигаться, то загружаем
+        # нормальное изображение и разрешаем танку двигаться
         elif not self.hidden and self.spawn_stopper:
             self.image = self.orig_image
             self.spawn_stopper = False
-
-        # TODO При игре по сети необходимо как то получать нажатые клавиши
+        # Получение действий
         actions = keystate[self.player]
-
+        # Обработка действий по перемещению танка
         self.move(actions)
+        # Стрельба
         if 'shoot' in actions:
             self.shoot()
 
     def shoot(self):
+        """
+        Стрельба игрока.
+        :return:
+        """
         now = pygame.time.get_ticks()
+        # Если прошедшее время между выстрелами больше задержки,
+        # то мы можем выстрелить заново
         if now - self.last_shot > self.shoot_delay:
             self.last_shot = now
+            # Если объета пули нет или пуля уже разрушена, то стреляем повторно
             if self.bullet is None or not self.bullet.alive():
+                # Добавляем звук выстрела
                 self.game.add_music_track('shoot_player')
+                # Создаем пулю
                 bullet = Bullet(self.rect, self.side, self.game, self,
                                 speed=self.bullet_speed)
-                bullet.add(self.game.all_sprites, self.game.bullets)
                 self.bullet = bullet
 
     def earn_points(self, mob):
+        """
+        Получаем объект моба, которого мы уничтожили или бонуса, который
+        собрали и начисляем за него очки
+        :param mob:
+        :return:
+        """
         # mob - points
         points = mob.points
+        # Запускаем анимацю появления очков за моба
         PointsAnim(self.game, points, mob.rect)
+        # Засчитываем очки
         self.count_points += points
-        if mob.__class__.__name__ == 'Bot':
+        # Если моб это бот - враг,  то добавляем в список уничтоженных врагов
+        if isinstance(mob, Bot):
             type_b = mob.type_tanks
             if type_b not in self.killed_enemies:
                 self.killed_enemies[type_b] = points
@@ -178,6 +278,12 @@ class Player(pygame.sprite.Sprite):
                 self.killed_enemies[type_b] += points
 
     def compare_rect_with_bot(self, rect: pygame.rect.Rect):
+        """
+        Проверка координаты с ботом
+        :param rect: Координаты бота
+        :return: True: Если координаты пересеклись
+        :return: False: Если координаты не пересеклись
+        """
         if rect.x <= self.rect.x <= rect.x + rect.width\
                 or rect.y <= self.rect.y <= rect.y + rect.width:
             return True
@@ -193,7 +299,7 @@ class Bullet(pygame.sprite.Sprite):
     }
 
     def __init__(self, rect_tank, side: str, game, who_shoot, speed=5):
-        super().__init__()
+        super().__init__(game.all_sprites, game.bullets)
         self.who_shoot = who_shoot
         self.game = game
         self.image = load_image(f'{DIR_FOR_TANKS_IMG}'
@@ -238,10 +344,12 @@ class Bullet(pygame.sprite.Sprite):
             # Пуля врезалась в бота и при этом выстрел был от игрока
             if c in self.game.mobs_group and\
                     isinstance(self.who_shoot, Player):
-                self.who_shoot.earn_points(c)
-                print(self.who_shoot.count_points)
                 c.kill()
                 self.kill()
+                # Если бот уничтожен, то зачисляем очки
+                if not c.alive():
+                    self.who_shoot.earn_points(c)
+                    print(self.who_shoot.count_points)
             # Пуля врезалась в орла
             if c == self.game.eagle:
                 c.eagle_break()
@@ -271,6 +379,10 @@ class Bullet(pygame.sprite.Sprite):
 
 
 class EmptyBot(pygame.sprite.Sprite):
+    """Создан для проверки, может ли бот проехать в
+    определенном направлении.
+    Объект имеет лишь маску и прямоугольник
+    """
     def __init__(self, x, y, w, h):
         super().__init__()
         self.rect = pygame.Rect(x, y, w, h)
@@ -279,6 +391,10 @@ class EmptyBot(pygame.sprite.Sprite):
 
 
 class Bot(pygame.sprite.Sprite):
+    """
+    Объект бота - вражеского танка
+    """
+    # Обозначение названий загружаемых картинок
     images = {
         't0': 't_w.png', 'l0': 't_w_l.png', 'r0': 't_w_r.png',
         'b0': 't_w_b.png',
@@ -307,7 +423,11 @@ class Bot(pygame.sprite.Sprite):
         self.side = 't'
         self.prev_side = 't'
         self.available_side = ['t', 'l', 'b', 'r']
+        # Этот список содержит "набор сторон" в которые мы могли или не могли
+        # Проехать. Если можем, то False, иначе True.
         self.sides_flags = [False, False, False, False]
+        # Флаги, которые показывает остановился ли бот по
+        # определенной координате
         self.is_stop_y = self.is_stop_x = False
 
         self.move_trigger = self.is_bonus = self.bonus_trigger = False
@@ -333,13 +453,14 @@ class Bot(pygame.sprite.Sprite):
 
         self.target = None
         self.points = 100
-
+        # Аналогично как и с игроком. После обозначения всех переменных,
+        # задаем некоторым конкретные значения
         self.set_properties()
 
         self.TILE_SIZE = tile_size
         self.image = self.mask = None
         self.load_tanks_image()
-
+        # Аналогично как и в классе игрока
         self.coords = coords[:-1]
         self.rect = self.image.get_rect()
         self.none_image = pygame.Surface((self.rect.width, self.rect.height),
@@ -348,6 +469,10 @@ class Bot(pygame.sprite.Sprite):
         self.spawn()
 
     def spawn(self):
+        """
+        Спавн бота
+        :return: None
+        """
         self.hidden = True
         self.spawn_stopper = True
         self.rect.x = self.coords[0]
@@ -355,29 +480,49 @@ class Bot(pygame.sprite.Sprite):
         SpawnAnim(self)
 
     def update(self, *event):
+        """
+        Обновление состояния бота
+        :param event: Какие нибудь события. Не используется
+        :return: None: Просто обновление состояния бота
+        """
+        # Аналогично как в клссе игрока
         if self.hidden:
             self.image = self.none_image
             return
         elif not self.hidden and self.spawn_stopper:
             self.image = self.orig_image
             self.spawn_stopper = False
+        # Если бот не "заморожен" и не скрыт, то заставляем его
+        # двигаться и стрелять
         if not self.isFreeze and not self.hidden:
             self.move()
             self.shoot()
 
     def kill(self, permanent=False):
+        """
+        Уничтожение бота.
+        :param permanent: флаг, для мгновенного уничтожения бота.
+        :return: None
+        """
         if permanent:
             Explosion(self)
             super().kill()
+        # Если жизни не закончились, то уменьшаем и выходим
         if self.lives > 1:
             self.lives -= 1
             return
+        # если танк бонусный, то после уничтожения необходимо заспавнить бонус
         if self.is_bonus:
             Bonus(self.game)
         Explosion(self)
         super().kill()
 
     def set_properties(self):
+        """
+        Функция, которая задает необходимые параметры в
+        зависимости от типа танка
+        :return: None
+        """
         self.isFreeze = False if\
             self.game.bot_manager.bonus_delay is None else True
         if self.number in [4, 11, 18]:
@@ -395,15 +540,29 @@ class Bot(pygame.sprite.Sprite):
             self.points = 400
 
     def set_target(self, target):
+        """
+        Установить цель для бота
+        :param target: None, players, eagle - Возможные цели
+        :return: None
+        """
         self.target = target
 
     def get_image_name(self):
+        """
+        Дополнительная функция, для загрузки изображения.
+        Необходима для формирования названия необходимой картинки
+        :return: name: Название сформированной картинки
+        """
         now = pygame.time.get_ticks()
         name = f"{self.side}{int(self.move_trigger)}"
-        if 2 < self.lives <= 4:
-            name = f'{self.side}{int(self.move_trigger)}_{self.lives}'
-        elif self.lives == 2:
-            name = f"{self.side}{int(self.move_trigger)}_{self.trigger_image}"
+        # Если танк 4 типа, то в зависимости от количества жазней
+        # изменяется цвет танка
+        if self.type_tanks == 't4':
+            if 2 < self.lives <= 4:
+                name = f'{self.side}{int(self.move_trigger)}_{self.lives}'
+            elif self.lives == 2:
+                name = f"{self.side}{int(self.move_trigger)}_" \
+                    f"{self.trigger_image}"
         """Если у нас танк является бонусным, то он должен мигать"""
         if now - self.bonus_trigger_timer > self.bonus_trigger_delay and \
                 self.is_bonus:
@@ -414,9 +573,15 @@ class Bot(pygame.sprite.Sprite):
         return name
 
     def load_tanks_image(self):
+        """
+        Загрузка изображения танка
+        :return: None
+        """
         self.move_trigger = not self.move_trigger
+        # Если танк бонусный, то он должен мигать. Для этого используем флаг
         if self.is_bonus:
             self.bonus_trigger = not self.bonus_trigger
+        # Необходимо для танка 4 типа.
         self.trigger_image = 4 if self.trigger_image == 3 else 3
 
         name_image = self.images[self.get_image_name()]
@@ -432,6 +597,10 @@ class Bot(pygame.sprite.Sprite):
         self.mask = pygame.mask.from_surface(s)
 
     def set_speedxy(self):
+        """
+        Загрузка скорости по X и Y в зависимости от стороны в которую едет танк
+        :return: None
+        """
         speeds = {'r': [self.speed, 0],
                   'l': [-self.speed, 0],
                   't': [0, -self.speed],
@@ -439,6 +608,12 @@ class Bot(pygame.sprite.Sprite):
         self.speedx, self.speedy = speeds[self.side]
 
     def get_side(self, direction):
+        """
+        Возвращает следующую сторону в зависимости от направления движения
+        (по часовому кругу или против)
+        :param direction: направление (-1, 1) - (против часовой, по часовой)
+        :return: side: Сторона из списка доступных
+        """
         if direction == 1:
             index = self.available_side.index(self.side)
             if index == len(self.available_side) - 1:
@@ -451,6 +626,13 @@ class Bot(pygame.sprite.Sprite):
             return self.available_side[index - 1]
 
     def change_side(self, custom=False):
+        """
+        Функция изменения направения движения
+        :param custom: параметр, который необходим только для смены стороны
+        по часовой стрелке или против
+        :return: None
+        """
+        # Обозначаем противоположные стороны для каждой стороны
         anti_side = {"r": 'l', 'l': 'r', 't': 'b', 'b': 't'}
         if custom:
             if random() > 0.5:
@@ -458,7 +640,7 @@ class Bot(pygame.sprite.Sprite):
             else:
                 self.side = self.get_side(direction=-1)
             return
-
+        # В зависимости от значения рандома мы изменяем направление
         if random() < 0.20:  # 0.25
             self.side = anti_side[self.side]
         else:
@@ -469,9 +651,15 @@ class Bot(pygame.sprite.Sprite):
                     self.side = self.get_side(direction=1)
                 else:
                     self.side = self.get_side(direction=-1)
+        # После изменения направления изменяем скорость передвижения
         self.set_speedxy()
 
     def move_collide(self, side: str, speed=(0, 0)):
+        """
+        Метод совпадает с методом из класса Player
+        :return None
+        :returns False, collide_obj or None
+        """
         self.side = side
         self.load_tanks_image()
         self.rect = self.rect.move(speed[0], speed[1])
@@ -480,23 +668,40 @@ class Bot(pygame.sprite.Sprite):
         del c[c.index(self)]
         if c or self.game.map.check_collide(self.rect):
             self.rect = self.rect.move(-speed[0], -speed[1])
+            # Если уперлись и цель не назначена, то меняем направление движения
             if self.target is None:
                 self.change_side()
+            # Если уперлись и установлена какая либо цель,
+            # то возвращаем объект с которым мы столкнулись (если только мы не
+            # столкнулсь с границой карты)
             if self.target is not None:
                 return False, None if not c else c[0]
 
     def get_nearest_players(self):
+        """
+        Находит ближайшего игрока к объекту бота
+        :return: player_rect - pygame.Rect
+        """
         def hypot(x1, y1, x2, y2):
+            # Возвращает расстояние между точками
             return (abs(x1 - x2) + abs(y1 - y2)) ** 0.5
         lens = {}
+        # Перебираем всех игроков и записываем расстояние до них
         for i in self.game.player_group:
             lens[hypot(i.rect.x, i.rect.y, self.rect.x, self.rect.y)] = i
+        # Узаем ближайшего игрока
         pl = lens[min(list(lens.keys()))]
         return pl.rect
 
     def check_pos_by_emptbot(self, pref_side):
-        """С помощью 'пустого бота' (имеет только rect и mask) мы проверяем,
-         можем ли заехать на определенную клетку"""
+        """
+        Проверка клетки с помощью EmptyBot - пустого бота
+        :param pref_side: сторона, в которую нам предпочтительно ехать
+        :return: True: Если бот может проехать в переданном направлении
+        :return: False: Если бот не может проехать в переданном направлении
+        """
+        # """С помощью 'пустого бота' (имеет только rect и mask) мы проверяем,
+        #  можем ли заехать на определенную клетку
         speeds = {'r': [self.speed, 0], 'l': [-self.speed, 0],
                   't': [0, -self.speed], 'b': [0, self.speed]}
         empty_b = EmptyBot(self.rect.x, self.rect.y,
@@ -515,25 +720,37 @@ class Bot(pygame.sprite.Sprite):
          Но если мы однажды не смогли проехать в том направлении
           (об этом мы узнаем из поля side_flags,
           где показывается в какую сторону мы не смогли проехать)
-         То мы едем и смотрим можем ли проехать в позицию prev_side
+         то мы едем и смотрим можем ли проехать в позицию prev_side
          (т.е та, в которую ехали раньше)
             Допустим pref_side = 'b'
                      prev_side = 'b'
                      side = 'l
                 Т.е мы едем влево, но хотим ехать вниз, то при каждом
                 передвижении мы проверяем можем ли мы проехать вниз,
-                и если можем, то изменяем side и prev_side, т.е поворачиваем"""
+                и если можем, то изменяем side и prev_side, т.е поворачиваем
+        :param: pref_side: сторона, в которую нам необходимо проехать
+        :return: True: Если бот может проехать в данном направлении
+        :return: False: Если бот не может проехать в данном направлении
+        """
         anti_side = {'r': 'l', 'l': 'r', 't': 'b', 'b': 't'}
+        # Проверка предпочитаемой стороны
         if self.check_pos_by_emptbot(pref_side):
+            # Если мы ранее не могли проехать в данную сторону, то смотрим
+            # Можем ли мы проехать в сторону, в которую
+            # ехали раньше - prev_side
             if self.sides_flags[self.available_side.index(pref_side)]:
                 is_empty = self.check_pos_by_emptbot(self.prev_side)
+                # Если можем, то меняем сторону и возвращаем False
                 if is_empty:
+                    # Обработка частных случаев
+                    # Тут возможно кроются баги. Нужно тестить
                     if self.side == pref_side:
                         return False
                     if self.side == anti_side[self.prev_side]:
                         self.side = pref_side
                         return True
                     # print(self.side, self.prev_side, pref_side)
+                    # Обработка общего случая
                     s = self.side
                     self.side = self.prev_side
                     self.prev_side = anti_side[s]
@@ -543,6 +760,12 @@ class Bot(pygame.sprite.Sprite):
         return False
 
     def get_side_by_pos(self, target_rect):
+        """
+        Получить сторону в зависимости от положения цели
+        :param target_rect: Положение цели
+        :return: 'r' or 'l' or 'b' or 't'
+        :return: None - error.
+        """
         if abs(target_rect.centerx - self.rect.centerx) > abs(
                 target_rect.centery - self.rect.centery):
             if target_rect.centerx >= self.rect.centerx:
@@ -556,7 +779,11 @@ class Bot(pygame.sprite.Sprite):
                 return 't'
 
     def move(self):
+        """функция, отвечающая за передвижение бота
+        """
         def just_drive():
+            # Просто заставляет бота двигаться
+            # работает с использованием random
             self.set_speedxy()
             now = pygame.time.get_ticks()
             self.move_collide(self.side, (self.speedx, self.speedy))
@@ -565,6 +792,11 @@ class Bot(pygame.sprite.Sprite):
                 self.start_time = now
 
         def go_to(target_rect):
+            """
+            Движение к определенной цели
+            :param target_rect: Координаты цели
+            :return: None
+            """
             # Узнаем сторону, в которую нам предпочтительно ехать
             pref_side = self.get_preferred_side(target_rect)
             # Если стороны нет (т.е мы приехали, то останавливаемся)
@@ -572,6 +804,8 @@ class Bot(pygame.sprite.Sprite):
                 self.move_collide(self.get_side_by_pos(target_rect), (0, 0))
                 return
             rez = self.check_side(pref_side)
+            # Можем проехать в указанную сторону, то двигаемся в направлении
+            # этой стороны
             if rez:
                 self.side = pref_side
             # print(self.side, self.prev_side,
@@ -579,37 +813,54 @@ class Bot(pygame.sprite.Sprite):
             #       (self.is_stop_x, self.is_stop_y), rez)
             self.set_speedxy()
             rez = self.move_collide(self.side, [self.speedx, self.speedy])
+            # Если уперлись
             if rez is not None and not rez[0]:
+                # Если уперлись в стенку, которую можно сломать, то мы можем
+                # Или объехать ее или выстрелить в нее
                 if rez[1] is not None and\
-                        rez[1].__class__.__name__ == 'Wall' and\
+                        isinstance(rez[1], Wall) and\
                         rez[1].isBroken and random() < 1 / 3:
                     self.shoot(custom=True)
                     return
                 else:
+                    # Иначе мы запускаем функцию, которая определяет
+                    # В какую сторону нужно ехать, чтобы выбраться из тупика
                     self.sides_flags[
                         self.available_side.index(self.side)] = True
                     self.breaking_deadlock()
             else:
+                # Если мы снова поехали в направлении,
+                # в котором мы не могли ехать раньше, то сбрасываем флаг
+                # для этого направления
                 self.sides_flags[self.available_side.index(self.side)] = False
-
+        # Если нет цели, то просто кружимся по карте
         if self.target is None:
             just_drive()
         if self.target == 'players':
             # print('------')
+            # Если есть еще живой игрок, то едем к нему
             if any(map(lambda x: x.alive(), self.game.player_group)):
                 # Узнаем позицию цели
                 players_rect = self.get_nearest_players()
                 go_to(players_rect)
             else:
+                # иначе просто катемся
                 just_drive()
         if self.target == 'eagle':
+            # Едем к орлу
             rect = self.game.eagle.rect
             go_to(rect)
 
     def shoot(self, custom=False):
+        """
+        Функция, которая позволяет стрелять танку
+        :param custom: Позволяет независимо ни на что выстрелить танку
+        :return: None
+        """
         now = pygame.time.get_ticks()
         if now - self.last_shot > self.shoot_delay:
             self.last_shot = now
+            # Такая же логика, что и в классе Player
             if self.can_shoot and (self.bullet is None or
                                    not self.bullet.alive()):
                 if random() < 1 / 10 or self.compare_rect() or custom:
@@ -621,7 +872,9 @@ class Bot(pygame.sprite.Sprite):
 
     def compare_rect(self):
         """Сравнивает координаты с орлом и игроком.
-        При равестве стреляет"""
+        При равестве стреляет
+        :return: True: Если координы совпали с игроком или с орлом
+        :return: False: Если координаты не совпали ни с кем"""
         for i in self.game.player_group:
             if i.compare_rect_with_bot(self.rect):
                 return True
@@ -632,7 +885,6 @@ class Bot(pygame.sprite.Sprite):
     def get_preferred_side(self, players_rect):
         """Функция, которая в зависимости от расположения
          игрока к боту определяет сторону, в которую необходимо ехать боту"""
-        # TODO доп.комментарии
         p_x, p_y = players_rect.centerx, players_rect.centery
         b_x, b_y = self.rect.centerx, self.rect.centery
         """Если мы достагли цели 
@@ -685,7 +937,13 @@ class Bot(pygame.sprite.Sprite):
         return None
 
     def breaking_deadlock(self):
-        # TODO доп.комментарии
+        """
+        Функция, определяет в какой стороне мы уперлись и на основе предыдущего
+        направления определяет в какую сторону бот должен повернуть.
+        Кроме сторон используется random, что позволяет добавить хаотичности
+        в движение бота
+        :return: None
+        """
         anti_side = {'r': 'l', 'l': 'r', 't': 'b', 'b': 't'}
         if self.side == 'b':
             if self.prev_side in [anti_side[self.side], 'b']:
@@ -756,6 +1014,10 @@ class Eagle(pygame.sprite.Sprite):
         self.isBroken = False
 
     def eagle_break(self):
+        """
+        Загружает изображение уничтоженного орла.
+        :return: None
+        """
         self.image = load_image(f'{WORLDIMG_DIR}\\{self.images["broken"]}')
         self.image = pygame.transform.scale(self.image, (self.TILE_SIZE,
                                                          self.TILE_SIZE))
@@ -763,13 +1025,27 @@ class Eagle(pygame.sprite.Sprite):
         self.isBroken = True
 
     def compare_rect_with_bot(self, rect: pygame.rect.Rect):
+        """
+        Сравнивает свои координаты с с координатами бота
+        :param rect: Координатц бота
+        :return: True: Если координаты пересеклись
+        :return: False: Если координаты не пересеклись
+        """
         if rect.x <= self.rect.x <= rect.x + rect.width\
                 or rect.y <= self.rect.y <= rect.y + rect.width:
             return True
         return False
 
     def activate_bonus(self, name_bonus):
+        """
+        Функция, которая активирует бонусы
+        :param name_bonus: имя бонуса
+        :return: None
+        """
         if name_bonus == 'sh':
+            # Если бонус лопата, то мы перебираем всевохможные варианты
+            # стен, которые расположены рядом с орлом и превращаем
+            # их в металлические
             for kx, ky in [[-1, -1], [0, -1], [1, -1], [1, 0], [1, 1],
                            [0, 1], [-1, 1], [-1, 0]]:
                 x, y = self.rect.x + (kx * self.TILE_SIZE),\
@@ -777,11 +1053,22 @@ class Eagle(pygame.sprite.Sprite):
                 empty_b = EmptyBot(x, y, self.TILE_SIZE, self.TILE_SIZE)
                 c = pygame.sprite.spritecollideany(empty_b,
                                                    self.game.wall_group)
+                # Если стенку можно сломать, то активируем у нее бонус
                 if c and c.isBroken:
                     c.set_bonus(name_bonus)
+                else:
+                    pass
+                # Спавн уничтоженных стенок пока отключен, т.к есть возможность
+                # спавна стенки на игроке
+
+                #     w = Wall(x, y, 13, self.TILE_SIZE, self.game)
+                #     w.set_bonus(name_bonus)
+                #     if self.game.map.check_collide(w.rect):
+                #         w.kill()
 
 
 class Wall(pygame.sprite.Sprite):
+    # Картинки стен по их id из карты
     type_wall = {
         3: 'wall_RT.png',
         4: 'wall_RD.png',
@@ -802,8 +1089,8 @@ class Wall(pygame.sprite.Sprite):
         13: 'metall_wall.png'
     }  # key(id) from Tiled Edit
 
-    def __init__(self, x, y, id, tile_size):
-        super().__init__()
+    def __init__(self, x, y, id, tile_size, game):
+        super().__init__(game.all_sprites, game.wall_group, game.map_group)
         self.isBroken = True if id not in [2, 13] else False
         self.isWall = True if id not in [2] else False
 
@@ -822,6 +1109,11 @@ class Wall(pygame.sprite.Sprite):
             self.blink_time = self.blink_timer = None
 
     def set_bonus(self, name_bonus):
+        """
+        Установка параметров в зависимости от бонусов
+        :param name_bonus:
+        :return: None
+        """
         if name_bonus == 'sh':
             self.bonus_name = name_bonus
             self.bonus_timer = pygame.time.get_ticks()
@@ -830,6 +1122,11 @@ class Wall(pygame.sprite.Sprite):
             self.reload_mask(13)
 
     def reload_mask(self, set_id):
+        """
+        Перезагружает картинку и маску по новому id
+        :param set_id: id картинки, которую надо загрузить
+        :return: None
+        """
         self.id = set_id
         self.isBroken = True if self.id not in [2, 13] else False
         self.isWall = True if self.id not in [2] else False
@@ -839,6 +1136,13 @@ class Wall(pygame.sprite.Sprite):
         self.mask = pygame.mask.from_surface(self.image)
 
     def change_yourself(self, coords):
+        """
+        Обрабатывает координаты, в которые врезался снаряд и в зависисомти от
+        Установленной картинки загружает новую.
+        Этим алгоритмом реализуется разрушаемость стенок в игре
+        :param coords: Координаты попадания пули в стену
+        :return: None
+        """
         x, y = coords
         max_s = self.tile_size              # 50
         half_s = max_s // 2 - max_s // 10 - 2  # 20
@@ -988,7 +1292,7 @@ class Bonus(pygame.sprite.Sprite):
         self.game = game
         self.points = 500
         self.bonus = choice(available_bonuses)
-        # self.bonus = 'p'
+        self.bonus = 'sh'
         self.image = load_image(f"{DIR_FOR_TANKS_IMG}"
                                 f"bonus\\{self.images[self.bonus]}")
         k = ((3 * self.game.TILE_SIZE) // 4) // self.image.get_rect().width
@@ -1026,6 +1330,11 @@ class Bonus(pygame.sprite.Sprite):
                 return
 
     def activate_bonus(self, player):
+        """
+        Активируют бонусы
+        :param player: Игрок, который активировал бонус
+        :return: None
+        """
         player.earn_points(self)
         if self.bonus in ['t', 's', 'h', 'p']:
             player.activate_bonus(self.bonus)
