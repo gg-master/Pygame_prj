@@ -291,36 +291,38 @@ class Player(pygame.sprite.Sprite):
 
 
 class Bullet(pygame.sprite.Sprite):
-    images = {
-        't': 'b.png',
-        'l': 'b_l.png',
-        'r': 'b_r.png',
-        'b': 'b_b.png'
-    }
-
     def __init__(self, rect_tank, side: str, game, who_shoot, speed=5):
         super().__init__(game.all_sprites, game.bullets)
         self.who_shoot = who_shoot
         self.game = game
-        self.image = load_image(f'{DIR_FOR_TANKS_IMG}'
-                                f'bullet\\{self.images[side]}')
-        k = (rect_tank.width // 4) // self.image.get_rect().width
-        self.image = pygame.transform.scale(self.image,
-                                            (self.image.get_rect().width * k,
-                                             self.image.get_rect().height * k))
-        self.mask = pygame.mask.from_surface(self.image)
-        self.rect = self.image.get_rect()
+
+        self.is_ricochet = False
+        self.from_ricochet = None
         self.side = side
         self.speed = speed
         self.speedy, self.speedx = 0, 0
-        self.set_rect(rect_tank)
+
+        self.rect = self.mask = None
+        self.orig_image = load_image(f'{DIR_FOR_TANKS_IMG}'
+                                     f'bullet\\b.png')
+        k = (rect_tank.width // 4) // self.orig_image.get_rect().width
+        self.orig_image = pygame.transform.scale(self.orig_image,
+                                                 (self.orig_image.get_rect()
+                                                  .width * k,
+                                                  self.orig_image.get_rect()
+                                                  .height * k))
+        self.image = self.orig_image.copy()
+        self.rect = self.image.get_rect()
+        self.rotate_image(180 if self.side == 'b' else
+                          -90 if self.side == 'r' else
+                          90 if self.side == 'l' else 0)
+        self.set_rect_and_speed(rect_tank)
 
     def update(self, *event):
         self.rect = self.rect.move(self.speedx, self.speedy)
         # удалить спрайт, если он заходит за верхнюю часть экрана
         if self.game.map.check_collide(self.rect):
             self.kill()
-        # TODO столкновне с другими пулями, игроками
         c = pygame.sprite.spritecollideany(self, self.game.all_sprites)
         if c is not None:
             # Пуля врезалась в стену
@@ -334,6 +336,8 @@ class Bullet(pygame.sprite.Sprite):
             # при этом эту пулю выстрелил не сам игрок
             if c in self.game.player_group:
                 if self.who_shoot != c:
+                    if self.handling_recochet(c):
+                        return
                     c.kill()
                     self.kill()
             # Если пуля врезалась в другую пулю, выпущенную из вражеского танка
@@ -344,6 +348,8 @@ class Bullet(pygame.sprite.Sprite):
             # Пуля врезалась в бота и при этом выстрел был от игрока
             if c in self.game.mobs_group and\
                     isinstance(self.who_shoot, Player):
+                if self.handling_recochet(c):
+                    return
                 c.kill()
                 self.kill()
                 # Если бот уничтожен, то зачисляем очки
@@ -355,11 +361,23 @@ class Bullet(pygame.sprite.Sprite):
                 c.eagle_break()
                 self.kill()
 
+    def handling_recochet(self, c):
+        # TODO добавить звук рикошета
+        rez = self.can_ricochet(c)
+        if self.is_ricochet and c == self.from_ricochet:
+            return True
+        if rez and not self.is_ricochet and random() < 1 / 8:
+            self.is_ricochet = True
+            self.from_ricochet = c
+            self.rotate_image(self.get_ricochet_angle(rez[1]))
+            return True
+        return False
+
     def kill(self):
         Explosion(self)
         super().kill()
 
-    def set_rect(self, rect_tank):
+    def set_rect_and_speed(self, rect_tank):
         if self.side == 't':
             self.rect.top = rect_tank.top  # self.rect.bottom
             self.rect.centerx = rect_tank.centerx
@@ -376,6 +394,66 @@ class Bullet(pygame.sprite.Sprite):
             self.rect.bottom = rect_tank.bottom  # self.rect.top
             self.rect.centerx = rect_tank.centerx
             self.speedy = self.speed
+
+    def rotate_image(self, angle):
+        self.set_angle_and_speed(angle)
+        self.image = pygame.transform.rotate(self.orig_image, angle)
+        self.mask = pygame.mask.from_surface(self.image)
+
+    def set_angle_and_speed(self, angle):
+        delta = ((self.speed ** 2) // 2) ** 0.5
+        if angle == -45:
+            self.speedx = delta
+            self.speedy = -delta
+        elif angle == 45:
+            self.speedx = -delta
+            self.speedy = -delta
+        elif angle == -135:
+            self.speedx = delta
+            self.speedy = delta
+        elif angle == 135:
+            self.speedx = -delta
+            self.speedy = delta
+
+    def can_ricochet(self, c):
+        coord_collide = pygame.sprite.collide_mask(c, self)
+        if coord_collide is None:
+            return False
+        x, y = coord_collide
+        if self.side in ['t', 'b']:
+            if 0 <= x <= c.rect.w // 3:
+                return True, 'l'
+            elif c.rect.w * 2 // 3 <= x <= c.rect.w:
+                return True, 'r'
+            return False
+        elif self.side in ['r', 'l']:
+            if 0 <= y <= c.rect.h // 3:
+                return True, 't'
+            elif c.rect.h * 2 // 3 <= y <= c.rect.h:
+                return True, 'b'
+            return False
+
+    def get_ricochet_angle(self, side):
+        if self.side == 't':
+            if side == 'r':
+                return -45
+            elif side == 'l':
+                return 45
+        elif self.side == 'b':
+            if side == 'r':
+                return -135
+            elif side == 'l':
+                return 135
+        elif self.side == 'r':
+            if side == 't':
+                return -45
+            if side == 'b':
+                return -135
+        elif self.side == 'l':
+            if side == 't':
+                return 45
+            if side == 'b':
+                return 135
 
 
 class EmptyBot(pygame.sprite.Sprite):
@@ -1292,7 +1370,7 @@ class Bonus(pygame.sprite.Sprite):
         self.game = game
         self.points = 500
         self.bonus = choice(available_bonuses)
-        self.bonus = 'sh'
+        # self.bonus = 'sh'
         self.image = load_image(f"{DIR_FOR_TANKS_IMG}"
                                 f"bonus\\{self.images[self.bonus]}")
         k = ((3 * self.game.TILE_SIZE) // 4) // self.image.get_rect().width

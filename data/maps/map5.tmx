@@ -60,22 +60,6 @@
   <object id="66" gid="11" x="960" y="400" width="80" height="80"/>
   <object id="67" gid="11" x="800" y="240" width="80" height="80"/>
   <object id="68" gid="11" x="800" y="320" width="80" height="80"/>
-  <object id="78" gid="13" x="240" y="480" width="80" height="80"/>
-  <object id="79" gid="13" x="320" y="480" width="80" height="80"/>
-  <object id="80" gid="13" x="400" y="480" width="80" height="80"/>
-  <object id="92" gid="13" x="240" y="240" width="80" height="80"/>
-  <object id="93" gid="13" x="320" y="240" width="80" height="80"/>
-  <object id="94" gid="13" x="400" y="240" width="80" height="80"/>
-  <object id="95" gid="13" x="400" y="320" width="80" height="80"/>
-  <object id="97" gid="13" x="160" y="480" width="80" height="80"/>
-  <object id="98" gid="13" x="80" y="480" width="80" height="80"/>
-  <object id="99" gid="13" x="400" y="400" width="80" height="80"/>
-  <object id="100" gid="13" x="80" y="400" width="80" height="80"/>
-  <object id="101" gid="13" x="80" y="320" width="80" height="80"/>
-  <object id="102" gid="13" x="80" y="240" width="80" height="80"/>
-  <object id="103" gid="13" x="80" y="160" width="80" height="80"/>
-  <object id="109" gid="13" x="160" y="160" width="80" height="80"/>
-  <object id="110" gid="13" x="240" y="160" width="80" height="80"/>
  </objectgroup>
  <objectgroup id="5" name="eagle">
   <object id="1" gid="14" x="0" y="1040" width="80" height="80"/>
