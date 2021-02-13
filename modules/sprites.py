@@ -40,6 +40,8 @@ class Player(pygame.sprite.Sprite):
         self.bullet_speed = 5
         self.shoot_delay = 200
         self.last_shot = pygame.time.get_ticks()
+        self.turning_turret_delay = 750
+        self.turning_turret_timer = None
 
         self.hidden = self.with_shield = self.spawn_stopper = False
         # После объявления некоторых параметров для танка игрока
@@ -153,18 +155,36 @@ class Player(pygame.sprite.Sprite):
             Explosion(self)
             # Если жизней не осталось, то убвиаем окончательно
             if self.lives <= 0:
+                self.game.add_music_track(
+                    choice(['exp1', 'exp2', 'exp3', 'exp4',
+                            'exp5', 'exp6', 'exp7',
+                            ]))
                 super().kill()
                 return
             # Если у игрока танк 4 типа, то у него есть 1 доп жизнь
             # т.е такой танк может перенести 1 выстрел
             if self.type_tanks == 't4':
+                self.game.add_music_track(choice(['ric2', 'ric1']))
                 if self.bullet_prof:
                     self.bullet_prof = False
                     return
             # Если у игрока еще остались жизни, то уменьшаем на 1 и
             # запускаем спавн
+            self.game.add_music_track(choice(['exp1', 'exp2', 'exp3', 'exp4',
+                                              'exp5', 'exp6', 'exp7',
+                                              ]))
             self.lives -= 1
             self.spawn()
+
+    def turning_turret(self):
+        now = pygame.time.get_ticks()
+        if self.turning_turret_timer is not None and\
+                now - self.turning_turret_timer < \
+                self.turning_turret_delay:
+            self.game.add_music_track({f"{self.__class__.__name__}"
+                                       f"{self.player}": 'turning_turret'})
+        else:
+            self.turning_turret_timer = None
 
     def move_collide(self, side: str, speed=(0, 0)):
         """
@@ -175,8 +195,12 @@ class Player(pygame.sprite.Sprite):
         :return: None: Только проверка может ли танк проехать в
             заданном направлении
         """
+        anti_side = {"r": 'l', 'l': 'r', 't': 'b', 'b': 't'}
         self.game.add_music_track({f"{self.__class__.__name__}"
-                                   f"{self.player}": 'move_s1'})
+                                   f"{self.player}": f'move_s{self.player}'})
+        if side not in [self.side, anti_side[self.side]]:
+            self.turning_turret_timer = pygame.time.get_ticks()
+
         # Устанавливаем сторону и загружаем изображение танка для новой стороны
         self.side = side
         self.load_tanks_image()
@@ -188,7 +212,10 @@ class Player(pygame.sprite.Sprite):
                                         pygame.sprite.collide_mask)
         # Если пересекаемся с бонусом, то активируем его
         c_b = pygame.sprite.spritecollideany(self, self.game.bonus_group)
-        c_b.activate_bonus(self) if c_b else None
+        if c_b:
+            self.game.add_music_track(choice(['select1', 'select2', 'select3',
+                                              'select4', 'select5']))
+            c_b.activate_bonus(self)
         del c[c.index(self)]  # Удаляем себя из списка
         # Если список не пустой, или же если мы пересеклись с границой карты,
         # то "отъезжаем назад"
@@ -213,6 +240,10 @@ class Player(pygame.sprite.Sprite):
             self.move_collide('l', (-self.speed, 0))
         elif 'right' in action:
             self.move_collide('r', (self.speed, 0))
+        else:
+            self.game.add_music_track({f"{self.__class__.__name__}"
+                                       f"{self.player}": 'waiting'})
+        self.turning_turret()
 
     def update(self, *args, keystate=None):
         """
@@ -324,6 +355,7 @@ class Bullet(pygame.sprite.Sprite):
         self.rect = self.rect.move(self.speedx, self.speedy)
         # удалить спрайт, если он заходит за верхнюю часть экрана
         if self.game.map.check_collide(self.rect):
+            self.game.add_music_track(choice(['hit2', 'hit7']))
             self.kill()
         c = pygame.sprite.spritecollideany(self, self.game.all_sprites)
         if c is not None:
@@ -332,26 +364,33 @@ class Bullet(pygame.sprite.Sprite):
                 coord_collide = pygame.sprite.collide_mask(c, self)
                 if coord_collide is not None:
                     if c.isBroken:
+                        self.game.add_music_track(choice(['hit2', 'hit5']))
                         c.change_yourself(coord_collide)
+                    else:
+                        self.game.add_music_track('hit3')
                     self.kill()
-            # Если пуля врезелась в танк игрока и
-            # при этом эту пулю выстрелил не сам игрок
+            # Если пуля врага врезелась в танк игрока
             if c in self.game.player_group:
                 if self.who_shoot != c:
                     if self.handling_recochet(c):
+                        self.game.add_music_track(choice(['ric1', 'ric2']))
                         return
+                    self.game.add_music_track(choice(['hit4', 'hit3']))
                     c.kill()
                     self.kill()
             # Если пуля врезалась в другую пулю, выпущенную из вражеского танка
             if c in self.game.bullets and c is not self:
                 if self.who_shoot != c.who_shoot:
+                    self.game.add_music_track(choice(['hit1', 'hit2']))
                     self.kill()
                     c.kill()
             # Пуля врезалась в бота и при этом выстрел был от игрока
             if c in self.game.mobs_group and\
                     isinstance(self.who_shoot, Player):
                 if self.handling_recochet(c):
+                    self.game.add_music_track(choice(['ric1b', 'ric2b']))
                     return
+                self.game.add_music_track(choice(['hit2', 'hit6']))
                 c.kill()
                 self.kill()
                 # Если бот уничтожен, то зачисляем очки
@@ -360,6 +399,7 @@ class Bullet(pygame.sprite.Sprite):
                     print(self.who_shoot.count_points)
             # Пуля врезалась в орла
             if c == self.game.eagle:
+                self.game.add_music_track('hit3')
                 c.eagle_break()
                 self.kill()
 
@@ -381,19 +421,19 @@ class Bullet(pygame.sprite.Sprite):
 
     def set_rect_and_speed(self, rect_tank):
         if self.side == 't':
-            self.rect.top = rect_tank.top  # self.rect.bottom
+            self.rect.top = rect_tank.top  # + self.rect.h  # self.rect.bottom
             self.rect.centerx = rect_tank.centerx
             self.speedy = -self.speed
         if self.side == 'l':
-            self.rect.left = rect_tank.left  # self.rect.right
+            self.rect.left = rect_tank.left  # + self.rect.w  # self.rect.right
             self.rect.centery = rect_tank.centery
             self.speedx = -self.speed
         if self.side == 'r':
-            self.rect.right = rect_tank.right  # self.rect.left
+            self.rect.right = rect_tank.right  # - self.rect.w# self.rect.left
             self.rect.centery = rect_tank.centery
             self.speedx = self.speed
         if self.side == 'b':
-            self.rect.bottom = rect_tank.bottom  # self.rect.top
+            self.rect.bottom = rect_tank.bottom  # - self.rect.h# self.rect.top
             self.rect.centerx = rect_tank.centerx
             self.speedy = self.speed
 
@@ -591,6 +631,8 @@ class Bot(pygame.sprite.Sprite):
         if self.lives > 1:
             self.lives -= 1
             return
+        self.game.add_music_track(choice(['exp1', 'exp2', 'exp3', 'exp4',
+                                          'exp5', 'exp6', 'exp7']))
         # если танк бонусный, то после уничтожения необходимо заспавнить бонус
         if self.is_bonus:
             Bonus(self.game)
@@ -1372,7 +1414,7 @@ class Bonus(pygame.sprite.Sprite):
         self.game = game
         self.points = 500
         self.bonus = choice(available_bonuses)
-        # self.bonus = 'sh'
+        # self.bonus = 'g'
         self.image = load_image(f"{DIR_FOR_TANKS_IMG}"
                                 f"bonus\\{self.images[self.bonus]}")
         k = ((3 * self.game.TILE_SIZE) // 4) // self.image.get_rect().width
@@ -1419,8 +1461,11 @@ class Bonus(pygame.sprite.Sprite):
         if self.bonus in ['t', 's', 'h', 'p']:
             player.activate_bonus(self.bonus)
         elif self.bonus in ['c', 'g']:
+            self.game.add_music_track('grenade'
+                                      if self.bonus == 'g' else 'clock')
             self.game.bot_manager.activate_bonus(self.bonus)
         elif self.bonus in ['sh']:
+            self.game.add_music_track('shovel')
             self.game.eagle.activate_bonus(self.bonus)
         self.kill()
 

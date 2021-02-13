@@ -31,17 +31,22 @@ class MusicPlayer:
         'hit2': 'hit_sound\\hit_bullet2.wav',
         'hit3': 'hit_sound\\hit_bullet3.wav',
         'hit4': 'hit_sound\\hit_bullet4.wav',
+        'hit5': 'hit_sound\\hit_bullet5.wav',
+        'hit6': 'hit_sound\\hit_bullet4low.wav',
+        'hit7': 'hit_sound\\hit_bullet3low.wav',
         'ric1': 'hit_sound\\ricochet.wav',
         'ric2': 'hit_sound\\ricochet2.wav',
+        'ric1b': 'hit_sound\\ricochet_b.wav',
+        'ric2b': 'hit_sound\\ricochet2_b.wav',
         'select1': 'select_sound\\select1.wav',
         'select2': 'select_sound\\select2.wav',
         'select3': 'select_sound\\select3.wav',
         'select4': 'select_sound\\select4.wav',
         'select5': 'select_sound\\select5.wav',
         'move_s1': 'tanks_sound\\move_sound.wav',
-        'move_s2': 'tanks_sound\\move_sound2.mp3',
+        'move_s2': 'tanks_sound\\move_sound2.wav',
         'turning_turret': 'tanks_sound\\turning_turret.wav',
-        'waiting': 'tanks_sound\\waiting_in_tank_low.wav',
+        'waiting': 'tanks_sound\\waiting_in_tank.wav',
         'grenade': 'bonus_sound\\grenade.wav',
         'shovel': 'bonus_sound\\shovel.wav',
     }
@@ -81,13 +86,11 @@ class MusicPlayer:
                         self.sound_list[i].fadeout(200)
                     del self.active_sound[k_act_s]
                 else:
-                    to_del = []
                     for i in self.active_sound[k_act_s]:
                         if i not in white_list[k_act_s]:
                             self.sound_list[i].fadeout(200)
-                            to_del.append(self.active_sound[k_act_s].index(i))
-                    for index in to_del:
-                        del self.active_sound[k_act_s][index]
+                            del self.active_sound[k_act_s][
+                                self.active_sound[k_act_s].index(i)]
 
     def play_list(self, track_list):
         for name_track in track_list:
@@ -96,10 +99,10 @@ class MusicPlayer:
                 n_m = name_track[key]
                 if key in self.active_sound:
                     if n_m not in self.active_sound[key]:
-                        self.sound_list[n_m].play()
+                        self.sound_list[n_m].play(-1)
                         self.active_sound[key].append(n_m)
                 else:
-                    self.sound_list[n_m].play()
+                    self.sound_list[n_m].play(-1)
                     self.active_sound[key] = [n_m]
 
             elif name_track in self.sound_list:
