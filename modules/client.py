@@ -17,16 +17,39 @@ SOUND_DIR = 'data\\music\\'
 
 
 class MusicPlayer:
-    sound = {
+    all_track = {
         'shoot_player': 'shoot_sound\\shoot_1.wav',
         'shoot_bot': 'shoot_sound\\shoot_2.wav',
-        'expl_b1': '',
-        'expl_b2': '',
-        'expl_t1': '',
-        'expl_t2': ''
+        'exp1': 'explosion_sound\\explosion1.wav',
+        'exp2': 'explosion_sound\\explosion2.wav',
+        'exp3': 'explosion_sound\\explosion3.wav',
+        'exp4': 'explosion_sound\\explosion4.wav',
+        'exp5': 'explosion_sound\\explosion5.wav',
+        'exp6': 'explosion_sound\\explosion6.wav',
+        'exp7': 'explosion_sound\\explosion7.wav',
+        'hit1': 'hit_sound\\hit_bullet.wav',
+        'hit2': 'hit_sound\\hit_bullet2.wav',
+        'hit3': 'hit_sound\\hit_bullet3.wav',
+        'hit4': 'hit_sound\\hit_bullet4.wav',
+        'ric1': 'hit_sound\\ricochet.wav',
+        'ric2': 'hit_sound\\ricochet2.wav',
+        'select1': 'select_sound\\select1.wav',
+        'select2': 'select_sound\\select2.wav',
+        'select3': 'select_sound\\select3.wav',
+        'select4': 'select_sound\\select4.wav',
+        'select5': 'select_sound\\select5.wav',
+        'move_s1': 'tanks_sound\\move_sound.wav',
+        'move_s2': 'tanks_sound\\move_sound2.mp3',
+        'turning_turret': 'tanks_sound\\turning_turret.wav',
+        'waiting': 'tanks_sound\\waiting_in_tank_low.wav',
+        'grenade': 'bonus_sound\\grenade.wav',
+        'shovel': 'bonus_sound\\shovel.wav',
     }
 
     def __init__(self, settings):
+        self.sound_list = {}
+        self.music_list = {}
+        self.active_sound = {}  # 'player1': ['move']
         self.volume_music = settings['music']
         self.volume_effects = settings['effects']
         self.load_sounds()
@@ -34,24 +57,63 @@ class MusicPlayer:
     def load_sounds(self):
         if os.getcwd().split('\\')[-1] == 'modules':
             os.chdir('..')
-        for name in self.sound:
-            if not self.sound[name]:
-                continue
-            self.sound[name] = pygame.mixer.Sound(
-                os.path.join(SOUND_DIR, self.sound[name]))
-            self.sound[name].set_volume(self.volume_effects / 100)
+        for name in self.all_track.keys():
+            self.sound_list[name] = pygame.mixer.Sound(
+                os.path.join(SOUND_DIR, self.all_track[name]))
+            self.sound_list[name].set_volume(self.volume_effects / 100)
+
+    def analyze_active_sound_list(self, track_list):
+        white_list = {}
+        for tr in track_list:
+            if isinstance(tr, dict):
+                key = list(tr.keys())[0]
+                if key in white_list:
+                    white_list[key].append(tr[key])
+                else:
+                    white_list[key] = [tr[key]]
+
+        for k_act_s in list(self.active_sound.keys()):
+            if k_act_s in self.active_sound:
+                if k_act_s not in white_list:
+                    # Если ключа нет в белом списке,
+                    # то выключаем все звуки для этого ключа из списка активных
+                    for i in self.active_sound[k_act_s]:
+                        self.sound_list[i].fadeout(200)
+                    del self.active_sound[k_act_s]
+                else:
+                    to_del = []
+                    for i in self.active_sound[k_act_s]:
+                        if i not in white_list[k_act_s]:
+                            self.sound_list[i].fadeout(200)
+                            to_del.append(self.active_sound[k_act_s].index(i))
+                    for index in to_del:
+                        del self.active_sound[k_act_s][index]
 
     def play_list(self, track_list):
         for name_track in track_list:
-            if name_track in self.sound:
-                self.sound[name_track].play()
+            if isinstance(name_track, dict):
+                key = list(name_track.keys())[0]
+                n_m = name_track[key]
+                if key in self.active_sound:
+                    if n_m not in self.active_sound[key]:
+                        self.sound_list[n_m].play()
+                        self.active_sound[key].append(n_m)
+                else:
+                    self.sound_list[n_m].play()
+                    self.active_sound[key] = [n_m]
+
+            elif name_track in self.sound_list:
+                self.sound_list[name_track].play()
             else:
                 print('track not found')
 
-    def update(self):
-        pass
-
-#  TODO при постановке игры на пазу, необходимо всю музыку поставить на паузу
+    def update(self, game):
+        track_list = game.get_track_list()
+        self.play_list(track_list)
+        self.analyze_active_sound_list(track_list)
+        # print(self.active_sound)
+        #  TODO при постановке игры на пазу, необходимо
+        #   всю музыку поставить на паузу
 
 
 class Client:
@@ -65,7 +127,7 @@ class Client:
     def update(self, *args):
         keystate = self.get_key_state()
         self.game.update(*args, keystate=keystate)
-        self.music_player.play_list(self.game.get_track_list())
+        self.music_player.update(self.game) if not args else ''
 
     def render(self):
         self.game.render()

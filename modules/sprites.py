@@ -175,6 +175,8 @@ class Player(pygame.sprite.Sprite):
         :return: None: Только проверка может ли танк проехать в
             заданном направлении
         """
+        self.game.add_music_track({f"{self.__class__.__name__}"
+                                   f"{self.player}": 'move_s1'})
         # Устанавливаем сторону и загружаем изображение танка для новой стороны
         self.side = side
         self.load_tanks_image()
@@ -366,7 +368,7 @@ class Bullet(pygame.sprite.Sprite):
         rez = self.can_ricochet(c)
         if self.is_ricochet and c == self.from_ricochet:
             return True
-        if rez and not self.is_ricochet and random() < 1 / 8:
+        if rez and not self.is_ricochet and random() < 1 / 3:
             self.is_ricochet = True
             self.from_ricochet = c
             self.rotate_image(self.get_ricochet_angle(rez[1]))

@@ -5,7 +5,6 @@ from math import ceil
 from modules.sprites import Player, Bot, Eagle, Wall, EmptyBot
 from default_funcs import load_image, load_settings
 
-
 """
 Карта должна содержать минимум эти слои.
 0. ground - layer tiles
@@ -257,7 +256,8 @@ class Map:
          по id необходимой клетки из Tiled Map Edit"""
         return list(map(lambda x: convert_coords(x, self.TILE_SIZE),
                         self.map.get_tile_locations_by_gid(
-            list(self.map.tiledgidmap.values()).index(id) + 1)))
+                            list(self.map.tiledgidmap.values()).index(
+                                id) + 1)))
 
     def render_layer(self, sc, layer_name: str):
         """Отрисовка на screen необходимых слоев"""
@@ -505,8 +505,7 @@ class Game:
             return
         for i in self.map.get_objects('walls'):
             x, y = i.x / self.map.koeff + OFFSET, i.y / self.map.koeff + OFFSET
-            wall = Wall(x, y, self.map.get_tile_id(i.gid),
-                        self.TILE_SIZE, self)
+            Wall(x, y, self.map.get_tile_id(i.gid), self.TILE_SIZE, self)
 
     def create_eagle(self):
         # Создаем объект орла
