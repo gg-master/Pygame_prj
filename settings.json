@@ -1,7 +1,7 @@
 {
   "player_settings": {
     "music": 100,
-    "effects": 69.2,
+    "effects": 100,
     "first_player_nick": "Player1",
     "second_player_nick": "Player2",
     "forward_move_btn_1": "w",

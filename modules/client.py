@@ -8,6 +8,7 @@ FPS = 60
 
 pygame.init()
 pygame.mixer.init()
+pygame.mixer.set_num_channels(32)
 screen = pygame.display.set_mode((WIDTH, HEIGHT), pygame.RESIZABLE)
 monitor_size = [pygame.display.Info().current_w,
                 pygame.display.Info().current_h]
@@ -17,7 +18,7 @@ SOUND_DIR = 'data\\music\\'
 
 
 class MusicPlayer:
-    all_track = {
+    all_sound = {
         'shoot_player': 'shoot_sound\\shoot_1.wav',
         'shoot_bot': 'shoot_sound\\shoot_2.wav',
         'exp1': 'explosion_sound\\explosion1.wav',
@@ -48,24 +49,45 @@ class MusicPlayer:
         'turning_turret': 'tanks_sound\\turning_turret.wav',
         'waiting': 'tanks_sound\\waiting_in_tank.wav',
         'grenade': 'bonus_sound\\grenade.wav',
-        'shovel': 'bonus_sound\\shovel.wav',
+        'shovel': 'bonus_sound\\shovel.wav'
+    }
+    all_music = {
+        'won': 'music/skirmish_won.mp3',
+        'lost': 'music/skirmish_lost.mp3',
+        'bg1': 'music/skirmish_background_01.mp3',
+        'bg2': 'music/skirmish_background_02.mp3',
+        'bg3': 'music/skirmish_progress.mp3'
     }
 
     def __init__(self, settings):
+
         self.sound_list = {}
-        self.music_list = {}
         self.active_sound = {}  # 'player1': ['move']
         self.volume_music = settings['music']
         self.volume_effects = settings['effects']
         self.load_sounds()
+        self.load_music('bg1')
+        self.was_pause = False
 
     def load_sounds(self):
         if os.getcwd().split('\\')[-1] == 'modules':
             os.chdir('..')
-        for name in self.all_track.keys():
+        for name in self.all_sound.keys():
             self.sound_list[name] = pygame.mixer.Sound(
-                os.path.join(SOUND_DIR, self.all_track[name]))
+                os.path.join(SOUND_DIR, self.all_sound[name]))
             self.sound_list[name].set_volume(self.volume_effects / 100)
+
+    def load_music(self, name):
+        if os.getcwd().split('\\')[-1] == 'modules':
+            os.chdir('..')
+        if name not in self.all_music:
+            print('track not found')
+            return
+        print(name)
+        pygame.mixer.music.load(os.path.join(SOUND_DIR, self.all_music[name]))
+        pygame.mixer.music.set_volume(self.volume_music / 2 / 100)
+        pygame.mixer.music.play(-1, start=0.0 if name not in [
+            'lost'] else 5.0)
 
     def analyze_active_sound_list(self, track_list):
         white_list = {}
@@ -97,6 +119,9 @@ class MusicPlayer:
             if isinstance(name_track, dict):
                 key = list(name_track.keys())[0]
                 n_m = name_track[key]
+                if key == 'change_music':
+                    self.load_music(n_m)
+                    continue
                 if key in self.active_sound:
                     if n_m not in self.active_sound[key]:
                         self.sound_list[n_m].play(-1)
@@ -107,16 +132,22 @@ class MusicPlayer:
 
             elif name_track in self.sound_list:
                 self.sound_list[name_track].play()
+                # pass
             else:
                 print('track not found')
 
     def update(self, game):
+        if game.is_pause:
+            self.was_pause = True
+            pygame.mixer.pause()
+            pygame.mixer.music.pause()
+        elif not game.is_pause and self.was_pause:
+            self.was_pause = False
+            pygame.mixer.unpause()
+            pygame.mixer.music.unpause()
         track_list = game.get_track_list()
         self.play_list(track_list)
         self.analyze_active_sound_list(track_list)
-        # print(self.active_sound)
-        #  TODO при постановке игры на пазу, необходимо
-        #   всю музыку поставить на паузу
 
 
 class Client:

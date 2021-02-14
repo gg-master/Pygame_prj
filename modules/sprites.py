@@ -967,6 +967,7 @@ class Bot(pygame.sprite.Sprite):
                 go_to(players_rect)
             else:
                 # иначе просто катемся
+                self.target = None
                 just_drive()
         if self.target == 'eagle':
             # Едем к орлу

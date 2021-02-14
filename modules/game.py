@@ -44,8 +44,8 @@ class BotManager:
         self.game = game_obj
         # В зависимости от количества игроков на поле должно
         # быть или 4 или 6 вражеских танков
-        self.player_count = 1 if self.game.player1 is not None \
-            else 2 if self.game.player2 is not None else 0
+        self.player_count = 2 if self.game.player2 is not None \
+            else 1 if self.game.player1 is not None else 0
         if self.player_count == 0:
             raise Exception('Недостаточно игроков')
         from modules import mobs_count
@@ -104,7 +104,8 @@ class BotManager:
         # зависимости от времени респавна и количества ботов на карте
         if not self.game.isGameOver and \
                 now - self.start_time > self.respawn_time and \
-                len(self.game.mobs_group) < 4 and self.global_count_bots > 0:
+                len(self.game.mobs_group) < self.visible_bots \
+                and self.global_count_bots > 0:
             tile = self.get_tile()
             # Если клетка для спавна свободна, то спавним бота
             if tile:
@@ -459,8 +460,9 @@ class Game:
         self.pause_screen = PauseScreen(self, self.screen)
         self.pause_sc_timer = pygame.time.get_ticks()
         self.isGameOver = False
-        self.isWin = False
+        self.isWin = None
         self.is_pause = False
+        self.is_music_changed = [False, False]
 
         self.all_sprites = pygame.sprite.Group()
         self.mobs_group = pygame.sprite.Group()
@@ -526,7 +528,16 @@ class Game:
             # Если игра проиграна, то необходимо отрисовать окно проигрыша
             if self.isGameOver:
                 self.game_over()
-            # if not self.isGameOver:
+            if any(map(lambda x: not x, self.is_music_changed)):
+                if self.bot_manager.get_count_bots() < 5 \
+                        and not self.is_music_changed[1]:
+                    self.add_music_track({'change_music': 'bg3'})
+                    self.is_music_changed[1] = True
+                elif self.bot_manager.get_count_bots() < 10 \
+                        and not self.is_music_changed[0]:
+                    self.add_music_track({'change_music': 'bg2'})
+                    self.is_music_changed[0] = True
+
             self.player_group.update(events, keystate=keystate)
             self.bullets.update()
             self.wall_group.update()
@@ -572,6 +583,9 @@ class Game:
                     self.eagle.isBroken:
                 self.isWin = False
                 self.isGameOver = True
+            if self.isWin is not None:
+                self.add_music_track({
+                    'change_music': 'won' if self.isWin else 'lost'})
 
     def game_over(self):
         print('game_over', self.isWin)
@@ -581,7 +595,6 @@ class Game:
             # self.__init__(self.type_game, self.level + 1, self.screen)
 
     def add_music_track(self, name):
-        # TODO обавление музыки в список для воспроизведения
         self.track_list.append(name)
 
     def get_track_list(self):
