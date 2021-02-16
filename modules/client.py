@@ -81,9 +81,8 @@ class MusicPlayer:
         if os.getcwd().split('\\')[-1] == 'modules':
             os.chdir('..')
         if name not in self.all_music:
-            print('track not found')
+            print('music not found')
             return
-        print(name)
         pygame.mixer.music.load(os.path.join(SOUND_DIR, self.all_music[name]))
         pygame.mixer.music.set_volume(self.volume_music / 2 / 100)
         pygame.mixer.music.play(-1, start=0.0 if name not in [
@@ -131,10 +130,10 @@ class MusicPlayer:
                     self.active_sound[key] = [n_m]
 
             elif name_track in self.sound_list:
-                self.sound_list[name_track].play()
-                # pass
+                # self.sound_list[name_track].play()
+                pass
             else:
-                print('track not found')
+                print('sound not found')
 
     def update(self, game):
         if game.is_pause:

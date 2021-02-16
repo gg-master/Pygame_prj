@@ -442,6 +442,118 @@ class PauseScreen:
                                 - self.text.get_rect().h // 2))
 
 
+class GameOverScreen:
+    images = {
+        't1': 'tanks_texture/t1/t_w.png',
+        't2': 'tanks_texture/t2/t_w.png',
+        't3': 'tanks_texture/t3/t_w.png',
+        't4': 'tanks_texture/t4/t_w.png',
+    }
+
+    def __init__(self, game, screen):
+        self.game = game
+        self.isWin = self.game.isWin
+        self.screen = pygame.Surface((screen.get_rect().w,
+                                      screen.get_rect().h),
+                                     pygame.SRCALPHA, 32)
+        self.screen.fill((0, 0, 0))
+        self.screen.set_alpha(0)
+        self.max_alpha_screen = 200
+        self.p1_nick = self.game.pl_sett['first_player_nick']
+        self.p2_nick = self.game.pl_sett['second_player_nick']
+
+        self.TS = self.game.TILE_SIZE
+        self.tanks_img = self.load_tanks_img()
+
+        self.k1 = self.TS
+        self.k2 = self.TS // 2
+        self.k3 = self.TS // 3
+
+        self.can_move = True
+        self.show_timer = pygame.time.get_ticks()
+        self.show_delay = 2000
+
+        self.log = {}
+        self.load_log()
+
+    def load_log(self):
+        c = 0
+        for player in [self.game.player1, self.game.player2]:
+            c += 1
+            if player is not None:
+                points = player.count_points
+                killed_enemies = player.killed_enemies
+                self.log[c] = [points, killed_enemies]
+
+    def update(self):
+        now = pygame.time.get_ticks()
+        if now - self.show_timer >= self.show_delay:
+            self.can_move = False
+
+    def render(self, screen):
+        self.screen = pygame.transform.scale(self.screen,
+                                             (screen.get_width(),
+                                              screen.get_height()))
+        if self.can_move:
+            return
+        self.screen.set_alpha(min(self.max_alpha_screen,
+                                  self.screen.get_alpha() + 10))
+        screen.blit(self.screen, (0, 0))
+        if self.screen.get_alpha() >= self.max_alpha_screen:
+            font = pygame.font.Font(None, self.k1)
+            rez_text = font.render('YOU WON' if self.isWin else "YOU LOSE",
+                                   False, pygame.Color('red'))
+            level = font.render(f"STAGE {self.game.level}",
+                                False, pygame.Color('orange'))
+            p1_nick = font.render(self.p1_nick, False, pygame.Color('yellow'))
+
+            screen.blit(rez_text, (screen.get_width() // 2 -
+                                   rez_text.get_width() // 2, self.TS - 10))
+            screen.blit(level, (screen.get_width() // 2 -
+                                level.get_width() // 2, 2 * self.TS))
+            screen.blit(p1_nick, (screen.get_width() // 4 -
+                                  p1_nick.get_width() // 2, 2 * self.TS))
+
+            if self.game.count_players == 2:
+                p2_nick = font.render(self.p2_nick, False,
+                                      pygame.Color('green'))
+                screen.blit(p2_nick, (screen.get_width() * 3 // 4 -
+                                      p2_nick.get_width() // 2, 2 * self.TS))
+
+            for i in range(len(self.tanks_img)):
+                screen.blit(self.tanks_img[i],
+                            (screen.get_width() // 2 -
+                             self.tanks_img[i].get_width() // 2,
+                             self.TS * 5 + (25 + self.TS) * i))
+
+            self.draw_log(screen)
+
+    def load_tanks_img(self):
+        arr = []
+        for i in ['t1', 't2', 't3', 't4']:
+            img = load_image(self.images[i])
+            arr.append(pygame.transform.scale(img, (self.TS, self.TS)))
+        return arr.copy()
+
+    def draw_log(self, screen):
+        x, y = screen.get_width() // 4, 3 * self.TS + 30
+        font = pygame.font.Font(None, self.k2 + 15)
+        for k in self.log.keys():
+            data = self.log[k]
+            if k != 1:
+                x *= 3
+            text = font.render(str(data[0]), False, pygame.Color('white'))
+            screen.blit(text, (x - text.get_width() // 2, y))
+            for t_t in data[1].keys():
+                num_t = int(t_t[-1])
+                y1 = (self.TS * 5 + (25 + self.TS) * (num_t - 1)) + self.TS // 2
+                score_text = font.render(f'{data[1][t_t][1]} - '
+                                         f'{data[1][t_t][0]}', False,
+                                         pygame.Color('white'))
+                screen.blit(score_text, (x - score_text.get_width() // 2,
+                                         y1 - score_text.get_height() // 2))
+
+
 class Game:
     def __init__(self, type_game, number_level, screen_surf):
         set_constans_from_settings()
@@ -457,6 +569,7 @@ class Game:
 
         self.pl_sett = load_settings()['player_settings']
         self.screen = screen_surf
+        self.game_over_screen = None
         self.pause_screen = PauseScreen(self, self.screen)
         self.pause_sc_timer = pygame.time.get_ticks()
         self.isGameOver = False
@@ -497,6 +610,7 @@ class Game:
             raise Exception('Онлайн еще не готов')
         else:
             raise Exception('Неверный тип игры')
+        self.count_players = 1 if self.player2 is None else 2
         self.bot_manager = BotManager(self)
         self.menu = Menu(self)
 
@@ -528,6 +642,8 @@ class Game:
             # Если игра проиграна, то необходимо отрисовать окно проигрыша
             if self.isGameOver:
                 self.game_over()
+                if not self.game_over_screen.can_move:
+                    return
             if any(map(lambda x: not x, self.is_music_changed)):
                 if self.bot_manager.get_count_bots() < 5 \
                         and not self.is_music_changed[1]:
@@ -537,7 +653,6 @@ class Game:
                         and not self.is_music_changed[0]:
                     self.add_music_track({'change_music': 'bg2'})
                     self.is_music_changed[0] = True
-
             self.player_group.update(events, keystate=keystate)
             self.bullets.update()
             self.wall_group.update()
@@ -571,6 +686,8 @@ class Game:
 
         if self.is_pause:
             self.pause_screen.render(self.screen)
+        if self.isGameOver:
+            self.game_over_screen.render(self.screen)
 
     def is_game_over(self):
         # Если иничтожены все боты-враги, то игры выйграна
@@ -586,9 +703,11 @@ class Game:
             if self.isWin is not None:
                 self.add_music_track({
                     'change_music': 'won' if self.isWin else 'lost'})
+            if self.isGameOver:
+                self.game_over_screen = GameOverScreen(self, self.screen)
 
     def game_over(self):
-        print('game_over', self.isWin)
+        self.game_over_screen.update()
         if self.isWin:
             pass
             # TODO Заготовка для будущей смены карты

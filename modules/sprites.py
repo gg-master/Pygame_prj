@@ -29,7 +29,8 @@ class Player(pygame.sprite.Sprite):
         self.type_tanks = 't1'
         self.move_trigger = False
 
-        self.killed_enemies = {}
+        self.killed_enemies = {'t1': [0, 0], 't2': [0, 0],
+                               't3': [0, 0], 't4': [0, 0]}
         self.count_points = 0
 
         self.speed = 2
@@ -306,9 +307,10 @@ class Player(pygame.sprite.Sprite):
         if isinstance(mob, Bot):
             type_b = mob.type_tanks
             if type_b not in self.killed_enemies:
-                self.killed_enemies[type_b] = points
+                self.killed_enemies[type_b] = [1, points]
             else:
-                self.killed_enemies[type_b] += points
+                self.killed_enemies[type_b][0] += 1
+                self.killed_enemies[type_b][1] += points
 
     def compare_rect_with_bot(self, rect: pygame.rect.Rect):
         """
