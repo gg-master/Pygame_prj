@@ -1,5 +1,4 @@
 from constants import *
-from globals import *
 from default_funcs import *
 import pygame as pg
 import pygame_gui
@@ -15,17 +14,17 @@ background.fill((0, 0, 0, 0))
 pg.display.set_caption(CAPTION)
 clock = pg.time.Clock()
 maps = ['']
-pg.mixer.music.load(MAIN_MENU_MUSIC_PATH)
+pg.mixer.music.load('data/music/main_theme.mp3')
 pg.mixer.music.set_volume(0.01)
-click_sound = pg.mixer.Sound(CLICK_BUTTON_SOUND_PATH)
-fon = pg.transform.scale(load_image('fon5.png'), (WIDTH, HEIGHT))
+click_sound = pg.mixer.Sound('data/sounds/click.wav')
+fon = pg.transform.scale(pg.image.load('style/data/system_image/main_menu_bckgrnd.png'), (WIDTH, HEIGHT))
 st_screen = pg.Surface(screen.get_size())
 bg_screen = pg.Surface(screen.get_size())
 bg_screen.blit(fon, (0, 0))
 lvl_scrn = pg.transform.scale(pg.image.load('style/data/system_image/'
-                                         'ch_lvl_scrn_back.png'), (WIDTH, HEIGHT))
+                                         'ch_lvl_bckgrnd.png'), (WIDTH, HEIGHT))
 border = pg.transform.scale(pg.image.load('style/data/system_image/'
-                                         'new_border.png'), (750, 750))
+                                         'border.png'), (750, 750))
 tanks_battle = load_image(GAME_HEADER_PATH)
 tanks_battle_rect = tanks_battle.get_rect()
 bck_dark = pg.Surface((WIDTH, HEIGHT))
@@ -57,7 +56,7 @@ def change_settings_f():
 
 def default_settings():
     global setting_window
-    with open('settings2.json') as f:
+    with open('default_settings.json') as f:
         data = json.load(f)
         with open('settings.json', 'w') as f1:
             json.dump(data, f1)
@@ -145,7 +144,7 @@ class SliderBar:
         self.post.fill((47, 48, 48))
         self.slider.fill((84, 87, 87))
         self.bar = pg.transform.scale(pg.image.load('style/data/system_image/'
-                                         'alpha_fon.png'), (self.width, int(self.height + self.height / 25)))
+                                         'alpha_0.png'), (self.width, int(self.height + self.height / 25)))
         self.bar.blit(self.post, (self.width / 3, 0))
         self.pxperv = self.height / 100
         self.value = value
@@ -165,7 +164,7 @@ class SettingsWindow:
     def __init__(self):
         self.width, self.height = WIDTH // 3, round(HEIGHT * 0.4)
         self.background = pg.transform.scale(pg.image.load('style/data/system_image/'
-                                         'fon_fon_dark.png'), (self.width, self.height))
+                                         'settings_wnd_bckgrnd.jpg'), (self.width, self.height))
         self.top = pg.Surface((self.width, self.height / 8))
         self.top.fill((70, 70, 68))
         self.window_scr = pg.Surface((self.width, self.height))
@@ -326,9 +325,9 @@ class Button:
         self.limit_y = limit[1]
         self.size = size
         self.normal_image = pg.transform.scale(pg.image.load('style/data/system_image/'
-                                          'menu_button_normal.png'), (width, height))
+                                          '0_02.png'), (width, height))
         self.hover_image = pg.transform.scale(pg.image.load('style/data/system_image/'
-                                         'menu_button_hovered.png'), (width, height))
+                                         'button_hovered.png'), (width, height))
         self.width, self.height = self.normal_image.get_rect().size
 
     def draw(self, win):
