@@ -96,13 +96,10 @@ class InputBox:
     def handle_event(self, event):
         FONT = pg.font.Font(None, 32)
         if event.type == pg.MOUSEBUTTONDOWN:
-            # If the user clicked on the input_box rect.
             if self.rect.collidepoint(event.pos):
-                # Toggle the active variable.
                 self.active = not self.active
             else:
                 self.active = False
-            # Change the current color of the input box.
             self.color = COLOR_ACTIVE if self.active else COLOR_INACTIVE
             self.border = self.active_border if self.active else self.inactive_border
         if self.active and not self.usual:
@@ -121,8 +118,6 @@ class InputBox:
                     self.text = pg.key.name(event.key)
                     self.btn = event.key
                     self.active = False
-
-                # Re-render the text.
         self.txt_surface = FONT.render(self.text, True, self.color)
 
     def update(self):
