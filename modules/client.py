@@ -49,7 +49,11 @@ class MusicPlayer:
         'turning_turret': 'tanks_sound\\turning_turret.wav',
         'waiting': 'tanks_sound\\waiting_in_tank.wav',
         'grenade': 'bonus_sound\\grenade.wav',
-        'shovel': 'bonus_sound\\shovel.wav'
+        'shovel': 'bonus_sound\\shovel.wav',
+        'clock': 'bonus_sound\\clock.wav',
+        'heal': 'bonus_sound\\heal.wav',
+        'pistol': 'bonus_sound\\pistol.wav',
+        'star': 'bonus_sound\\upgrade_star.wav'
     }
     all_music = {
         'won': 'music/skirmish_won.mp3',
@@ -69,6 +73,10 @@ class MusicPlayer:
         self.music_channel = pygame.mixer.Channel(pygame.mixer.
                                                   get_num_channels() - 1)
         self.load_tracks()
+        self.play_music('bg1')
+        self.was_pause = False
+
+    def reinit(self):
         self.play_music('bg1')
         self.was_pause = False
 
@@ -178,7 +186,9 @@ class Client:
         pygame.display.flip()
         if self.music_player is not None:
             self.music_player.stop_all()
-        self.music_player = MusicPlayer(self.pl_settings)
+            self.music_player.reinit()
+        else:
+            self.music_player = MusicPlayer(self.pl_settings)
         self.game = Game(count_players, type_game, sc)
 
     def update(self, *args):
@@ -224,7 +234,7 @@ fullscreen = False
 if __name__ == '__main__':
     clock = pygame.time.Clock()
     running = True
-    client = Client(2, 4, screen)
+    client = Client(2, 1, screen)
     while running:
         screen.fill(pygame.Color('black'))
         if client.is_exit:

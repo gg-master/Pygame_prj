@@ -1415,7 +1415,7 @@ class Bonus(pygame.sprite.Sprite):
         self.game = game
         self.points = 500
         self.bonus = choice(available_bonuses)
-        # self.bonus = 'g'
+        # self.bonus = 't'
         self.image = load_image(f"{DIR_FOR_TANKS_IMG}"
                                 f"bonus\\{self.images[self.bonus]}")
         k = ((3 * self.game.TILE_SIZE) // 4) // self.image.get_rect().width
@@ -1461,9 +1461,13 @@ class Bonus(pygame.sprite.Sprite):
         player.earn_points(self)
         if self.bonus in ['t', 's', 'h', 'p']:
             player.activate_bonus(self.bonus)
+            self.game.add_music_track('heal'
+                                      if self.bonus == 't'
+                                      else 'star' if self.bonus == 's'
+                                      else 'pistol' if self.bonus == 'p'
+                                      else 'helmet')
         elif self.bonus in ['c', 'g']:
-            self.game.add_music_track('grenade'
-                                      if self.bonus == 'g' else 'clock')
+            self.game.add_music_track('grenade') if self.bonus == 'g' else ''
             self.game.bot_manager.activate_bonus(self.bonus)
         elif self.bonus in ['sh']:
             self.game.add_music_track('shovel')

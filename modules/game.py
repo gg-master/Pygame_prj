@@ -192,6 +192,7 @@ class BotManager:
         # Обновляем счетчик для бонусов
         now = pygame.time.get_ticks()
         if self.bonus_timer is not None:
+            self.game.add_music_track({str(self.__class__.__name__): 'clock'})
             if now - self.bonus_timer > self.bonus_delay:
                 # Если время действия бонуса закончилось, убираем счетчик
                 self.bonus_timer = None
