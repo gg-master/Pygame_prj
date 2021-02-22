@@ -2,6 +2,8 @@ import pygame as pg
 import json
 import os
 import sys
+import pygame_gui
+from constants import *
 
 
 def load_settings():
@@ -31,3 +33,14 @@ def load_image(name, colorkey=None):
 def terminate():
     pg.quit()
     sys.exit()
+
+
+def call_confirm_dialog(manager):
+    pygame_gui.windows.UIConfirmationDialog(
+        rect=pg.Rect(
+            (WIDTH // 2 - 150, HEIGHT // 2 - 100), (300, 200)),
+        manager=manager,
+        window_title='Подтверждение',
+        action_long_desc='Вы уверены, что хотите выйти?',
+        action_short_name='OK',
+        blocking=True)
