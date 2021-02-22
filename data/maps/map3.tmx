@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<map version="1.4" tiledversion="1.4.3" orientation="orthogonal" renderorder="right-down" width="13" height="13" tilewidth="80" tileheight="80" infinite="0" nextlayerid="7" nextobjectid="138">
+<map version="1.4" tiledversion="1.4.3" orientation="orthogonal" renderorder="right-down" width="13" height="13" tilewidth="80" tileheight="80" infinite="0" nextlayerid="7" nextobjectid="140">
  <tileset firstgid="1" source="tileds.tsx"/>
  <layer id="2" name="ground" width="13" height="13">
   <data encoding="base64" compression="zlib">
@@ -61,8 +61,6 @@
   <object id="49" gid="13" x="320" y="880" width="80" height="80"/>
   <object id="50" gid="13" x="400" y="880" width="80" height="80"/>
   <object id="52" gid="10" x="480" y="160" width="80" height="80"/>
-  <object id="53" gid="8" x="560" y="80" width="80" height="80"/>
-  <object id="54" gid="9" x="400" y="80" width="80" height="80"/>
   <object id="55" gid="19" x="400" y="160" width="80" height="80"/>
   <object id="56" gid="21" x="560" y="160" width="80" height="80"/>
   <object id="57" gid="9" x="640" y="80" width="80" height="80"/>
@@ -125,9 +123,7 @@
   <object id="121" gid="10" x="880" y="80" width="80" height="80"/>
   <object id="122" gid="10" x="800" y="80" width="80" height="80"/>
   <object id="123" gid="10" x="720" y="80" width="80" height="80"/>
-  <object id="124" gid="19" x="560" y="80" width="80" height="80"/>
   <object id="125" gid="19" x="320" y="80" width="80" height="80"/>
-  <object id="126" gid="21" x="400" y="80" width="80" height="80"/>
   <object id="127" gid="21" x="640" y="80" width="80" height="80"/>
   <object id="128" gid="11" x="720" y="240" width="80" height="80"/>
   <object id="129" gid="11" x="800" y="240" width="80" height="80"/>
@@ -139,6 +135,8 @@
   <object id="135" gid="11" x="480" y="960" width="80" height="80"/>
   <object id="136" gid="11" x="560" y="960" width="80" height="80"/>
   <object id="137" gid="11" x="720" y="800" width="80" height="80"/>
+  <object id="138" gid="6" x="400" y="80" width="80" height="80"/>
+  <object id="139" gid="4" x="560" y="80" width="80" height="80"/>
  </objectgroup>
  <objectgroup id="5" name="eagle">
   <object id="51" gid="14" x="480" y="80" width="80" height="80"/>

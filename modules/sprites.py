@@ -103,8 +103,9 @@ class Player(pygame.sprite.Sprite):
         elif name_bonus == 't':
             self.lives += 1
         elif name_bonus == 'h':
-            self.with_shield = True
-            Shield(self)
+            if not self.with_shield:
+                self.with_shield = True
+                Shield(self)
         elif name_bonus == 'p':
             self.type_tanks = 't4'
             self.lives += 2
@@ -1415,7 +1416,7 @@ class Bonus(pygame.sprite.Sprite):
         self.game = game
         self.points = 500
         self.bonus = choice(available_bonuses)
-        # self.bonus = 't'
+        # self.bonus = 'h'
         self.image = load_image(f"{DIR_FOR_TANKS_IMG}"
                                 f"bonus\\{self.images[self.bonus]}")
         k = ((3 * self.game.TILE_SIZE) // 4) // self.image.get_rect().width
@@ -1461,11 +1462,11 @@ class Bonus(pygame.sprite.Sprite):
         player.earn_points(self)
         if self.bonus in ['t', 's', 'h', 'p']:
             player.activate_bonus(self.bonus)
-            self.game.add_music_track('heal'
-                                      if self.bonus == 't'
-                                      else 'star' if self.bonus == 's'
-                                      else 'pistol' if self.bonus == 'p'
-                                      else 'helmet')
+            if self.bonus in ['t', 's', 'p']:
+                self.game.add_music_track('heal'
+                                          if self.bonus == 't'
+                                          else 'star' if self.bonus == 's'
+                                          else 'pistol')
         elif self.bonus in ['c', 'g']:
             self.game.add_music_track('grenade') if self.bonus == 'g' else ''
             self.game.bot_manager.activate_bonus(self.bonus)
@@ -1490,6 +1491,7 @@ class Shield(pygame.sprite.Sprite):
         self.image = pygame.Surface((self.rect.width, self.rect.height),
                                     pygame.SRCALPHA, 32)
         self.offset = 3
+        self.player.game.add_music_track('helm_on')
 
     def load_image(self):
         self.shield_n = 0 if self.shield_n == 1 else 1
@@ -1511,6 +1513,7 @@ class Shield(pygame.sprite.Sprite):
                 else self.shield_timer
             if now - self.shield_timer > self.shield_duration:
                 self.player.with_shield = False
+                self.player.game.add_music_track('helm_off')
                 self.kill()
             else:
                 if now - self.last_update > self.frame_rate:

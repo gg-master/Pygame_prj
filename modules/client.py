@@ -2,6 +2,7 @@ import os
 import pygame
 from game import Game
 from default_funcs import load_settings, load_image
+from time import sleep
 
 WIDTH, HEIGHT = 950, 750
 FPS = 60
@@ -53,7 +54,9 @@ class MusicPlayer:
         'clock': 'bonus_sound\\clock.wav',
         'heal': 'bonus_sound\\heal.wav',
         'pistol': 'bonus_sound\\pistol.wav',
-        'star': 'bonus_sound\\upgrade_star.wav'
+        'star': 'bonus_sound\\upgrade_star.wav',
+        'helm_on': 'bonus_sound/helmet_on.wav',
+        'helm_off': 'bonus_sound/helmet_off.wav'
     }
     all_music = {
         'won': 'music/skirmish_won.mp3',
@@ -187,7 +190,9 @@ class Client:
         pygame.display.flip()
         if self.music_player is not None:
             self.music_player.stop_all()
+            sleep(1)
             self.music_player.reinit()
+
         else:
             self.music_player = MusicPlayer(self.pl_settings)
         self.game = Game(count_players, type_game, sc)
@@ -195,10 +200,8 @@ class Client:
     def update(self, *args):
         if self.game.feedback is not None:
             feedback = self.game.feedback
-            if feedback == 'continue':
-                self.create_new_game(self.type_game,
-                                     self.number_level + 1, self.screen)
-            elif feedback == 'restart':
+            if feedback in ['continue', 'restart']:
+                self.number_level += 1 if feedback == 'continue' else 0
                 self.create_new_game(self.type_game,
                                      self.number_level, self.screen)
             elif feedback == 'exit':
@@ -235,7 +238,7 @@ fullscreen = False
 if __name__ == '__main__':
     clock = pygame.time.Clock()
     running = True
-    client = Client(2, 1, screen)
+    client = Client(1, 1, screen)
     while running:
         screen.fill(pygame.Color('black'))
         if client.is_exit:

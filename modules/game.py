@@ -53,11 +53,11 @@ class BotManager:
         """Загружаем шаблон, по которому будут спавниться боты"""
         try:
             # Если необходимого шаблона нет, то загружаем рандомный
-            if self.game.level not in mobs_count.count:
+            if self.game.real_level not in mobs_count.count:
                 self.bot_comb = mobs_count.count[
                     choice(list(mobs_count.count.keys()))]
             else:
-                self.bot_comb = mobs_count.count[self.game.level]
+                self.bot_comb = mobs_count.count[self.game.real_level]
             # self.bot_comb = mobs_count.count[10]
         except KeyError:
             raise KeyError('Комбинация ботов не найдена')
@@ -658,6 +658,7 @@ class Game:
         self.MAP_SIZE = pygame.Rect(OFFSET, OFFSET,
                                     MAP_SIZE + OFFSET, MAP_SIZE + OFFSET)
         self.type_game = type_game
+        self.real_level = number_level
         self.level = self.map.level
         self.track_list = []
 
