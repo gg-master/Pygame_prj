@@ -398,7 +398,6 @@ class Bullet(pygame.sprite.Sprite):
                 # Если бот уничтожен, то зачисляем очки
                 if not c.alive():
                     self.who_shoot.earn_points(c)
-                    print(self.who_shoot.count_points)
             # Пуля врезалась в орла
             if c == self.game.eagle:
                 self.game.add_music_track('hit3')

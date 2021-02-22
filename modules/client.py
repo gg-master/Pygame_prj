@@ -1,14 +1,14 @@
 import os
 import pygame
 from game import Game
-from default_funcs import load_settings
+from default_funcs import load_settings, load_image
 
 WIDTH, HEIGHT = 950, 750
 FPS = 60
 
 pygame.init()
 pygame.mixer.init()
-pygame.mixer.set_num_channels(32)
+pygame.mixer.set_num_channels(35)
 screen = pygame.display.set_mode((WIDTH, HEIGHT), pygame.RESIZABLE)
 monitor_size = [pygame.display.Info().current_w,
                 pygame.display.Info().current_h]
@@ -60,33 +60,39 @@ class MusicPlayer:
     }
 
     def __init__(self, settings):
-
-        self.sound_list = {}
+        self.track_list = {}
         self.active_sound = {}  # 'player1': ['move']
+
         self.volume_music = settings['music']
         self.volume_effects = settings['effects']
-        self.load_sounds()
-        self.load_music('bg1')
+
+        self.music_channel = pygame.mixer.Channel(pygame.mixer.
+                                                  get_num_channels() - 1)
+        self.load_tracks()
+        self.play_music('bg1')
         self.was_pause = False
 
-    def load_sounds(self):
+    def load_tracks(self):
         if os.getcwd().split('\\')[-1] == 'modules':
             os.chdir('..')
         for name in self.all_sound.keys():
-            self.sound_list[name] = pygame.mixer.Sound(
+            self.track_list[name] = pygame.mixer.Sound(
                 os.path.join(SOUND_DIR, self.all_sound[name]))
-            self.sound_list[name].set_volume(self.volume_effects / 100)
+            self.track_list[name].set_volume(self.volume_effects / 100)
+        for name in self.all_music.keys():
+            if name in self.track_list:
+                print('track already exists')
+            self.track_list[name] = pygame.mixer.Sound(
+                os.path.join(SOUND_DIR, self.all_music[name]))
+            self.track_list[name].set_volume(self.volume_music / 2 / 100)
 
-    def load_music(self, name):
-        if os.getcwd().split('\\')[-1] == 'modules':
-            os.chdir('..')
-        if name not in self.all_music:
+    def play_music(self, name):
+        if name not in self.track_list:
             print('music not found')
             return
-        pygame.mixer.music.load(os.path.join(SOUND_DIR, self.all_music[name]))
-        pygame.mixer.music.set_volume(self.volume_music / 2 / 100)
-        pygame.mixer.music.play(-1, start=0.0 if name not in [
-            'lost'] else 5.0)
+        self.music_channel.fadeout(600)
+        self.music_channel.play(self.track_list[name], -1,
+                                fade_ms=600 if name not in ['lost'] else 0)
 
     def analyze_active_sound_list(self, track_list):
         white_list = {}
@@ -104,12 +110,12 @@ class MusicPlayer:
                     # Если ключа нет в белом списке,
                     # то выключаем все звуки для этого ключа из списка активных
                     for i in self.active_sound[k_act_s]:
-                        self.sound_list[i].fadeout(200)
+                        self.track_list[i].fadeout(200)
                     del self.active_sound[k_act_s]
                 else:
                     for i in self.active_sound[k_act_s]:
                         if i not in white_list[k_act_s]:
-                            self.sound_list[i].fadeout(200)
+                            self.track_list[i].fadeout(200)
                             del self.active_sound[k_act_s][
                                 self.active_sound[k_act_s].index(i)]
 
@@ -119,21 +125,24 @@ class MusicPlayer:
                 key = list(name_track.keys())[0]
                 n_m = name_track[key]
                 if key == 'change_music':
-                    self.load_music(n_m)
+                    self.play_music(n_m)
                     continue
                 if key in self.active_sound:
                     if n_m not in self.active_sound[key]:
-                        self.sound_list[n_m].play(-1)
+                        self.track_list[n_m].play(-1)
                         self.active_sound[key].append(n_m)
                 else:
-                    self.sound_list[n_m].play(-1)
+                    self.track_list[n_m].play(-1)
                     self.active_sound[key] = [n_m]
 
-            elif name_track in self.sound_list:
-                # self.sound_list[name_track].play()
-                pass
+            elif name_track in self.track_list:
+                self.track_list[name_track].play()
+                # pass
             else:
                 print('sound not found')
+
+    def stop_all(self):
+        pygame.mixer.stop()
 
     def update(self, game):
         if game.is_pause:
@@ -150,20 +159,48 @@ class MusicPlayer:
 
 
 class Client:
-    def __init__(self, count_players, type_game, screen):
+    def __init__(self, type_game, number_level, screen_surf):
         self.settings = load_settings()
         self.pl_settings = self.settings['player_settings']
+        self.type_game = type_game
+        self.number_level = number_level
+        self.screen = screen_surf
+        self.is_exit = False
 
+        self.ld_image = pygame.transform.scale(
+            load_image('fon/loading.png'), self.screen.get_size())
+        self.music_player = self.game = None
+        self.create_new_game(self.type_game,
+                             self.number_level, self.screen)
+
+    def create_new_game(self, count_players, type_game, sc):
+        self.screen.blit(self.ld_image, (0, 0))
+        pygame.display.flip()
+        if self.music_player is not None:
+            self.music_player.stop_all()
         self.music_player = MusicPlayer(self.pl_settings)
-        self.game = Game(count_players, type_game, screen)
+        self.game = Game(count_players, type_game, sc)
 
     def update(self, *args):
+        if self.game.feedback is not None:
+            feedback = self.game.feedback
+            if feedback == 'continue':
+                self.create_new_game(self.type_game,
+                                     self.number_level + 1, self.screen)
+            elif feedback == 'restart':
+                self.create_new_game(self.type_game,
+                                     self.number_level, self.screen)
+            elif feedback == 'exit':
+                self.is_exit = True
+        mouse_pos = pygame.mouse.get_pos()
         keystate = self.get_key_state()
-        self.game.update(*args, keystate=keystate)
+        self.game.update(*args, keystate=keystate,
+                         mouse_state=[mouse_pos, pygame.mouse.get_pressed(3)])
         self.music_player.update(self.game) if not args else ''
 
     def render(self):
-        self.game.render()
+        mouse_pos = pygame.mouse.get_pos()
+        self.game.render(mouse_pos=mouse_pos)
 
     def get_key_state(self):
         keystate = pygame.key.get_pressed()
@@ -190,6 +227,9 @@ if __name__ == '__main__':
     client = Client(2, 1, screen)
     while running:
         screen.fill(pygame.Color('black'))
+        if client.is_exit:
+            print('Выход в меню')
+            break
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
@@ -210,7 +250,6 @@ if __name__ == '__main__':
             client.update(event)
         client.update()
         client.render()
-
         pygame.display.flip()
         clock.tick(FPS)
     pygame.quit()

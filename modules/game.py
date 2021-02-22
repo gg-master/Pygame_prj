@@ -442,6 +442,63 @@ class PauseScreen:
                                 - self.text.get_rect().h // 2))
 
 
+class Button:
+    def __init__(self, text, x=0, y=0, width=616, height=68, size=40,
+                 limit=(0, 0)):
+        self.text = text
+        self.x = x
+        self.y = y
+        self.width, self.height = width, height
+        self.limit_x = limit[0]
+        self.limit_y = limit[1]
+        self.size = size
+        self.normal_image = self.hover_image = None
+        self.load_img()
+
+    def set_text(self, text):
+        self.text = text
+
+    def set_coords(self, x, y):
+        self.x, self.y = x, y
+
+    def load_img(self):
+        # if os.getcwd().split('\\')[-1] == 'modules':
+        #     os.chdir('..')
+        self.normal_image = pygame.transform.scale(
+            load_image('tanks_texture/menu/button_normal.png'),
+            (self.width, self.height))
+        self.hover_image = pygame.transform.scale(
+            load_image('tanks_texture/menu/button_hovered.png'),
+            (self.width, self.height))
+
+    def draw(self, win, mouse_pos):
+        x1, y1 = mouse_pos
+        font = pygame.font.SysFont("comicsans", self.size)
+        text = font.render(self.text, True, (255, 255, 255))
+        if self.x + self.limit_x <= x1 <= self.x + self.width - self.limit_x \
+                and self.y <= y1 <= self.y + self.height:
+            win.blit(self.hover_image, (self.x, self.y))
+            win.blit(text, (self.x + self.width / 2 - text.get_width() / 2,
+                            self.y + self.height / 2 - text.get_height() / 1.65))
+        else:
+            win.blit(self.normal_image, (self.x, self.y))
+            win.blit(text, (self.x + self.width / 2 - text.get_width() / 2,
+                            self.y + self.height / 2 - text.get_height() / 1.9))
+
+    def click(self, mouse_state):
+        x1, y1 = mouse_state[0]
+        is_click = mouse_state[1][0]
+        if not is_click:
+            return
+        if (self.x + self.limit_x <= x1 <=
+                self.x + self.width - self.limit_x and
+                self.y <= y1 <= self.y + self.height):
+            # todo проигывание звука клика по кнопке
+            return True
+        else:
+            return None
+
+
 class GameOverScreen:
     images = {
         't1': 'tanks_texture/t1/t_w.png',
@@ -458,7 +515,7 @@ class GameOverScreen:
                                      pygame.SRCALPHA, 32)
         self.screen.fill((0, 0, 0))
         self.screen.set_alpha(0)
-        self.max_alpha_screen = 200
+        self.max_alpha_screen = 215
         self.p1_nick = self.game.pl_sett['first_player_nick']
         self.p2_nick = self.game.pl_sett['second_player_nick']
 
@@ -469,6 +526,7 @@ class GameOverScreen:
         self.k2 = self.TS // 2
         self.k3 = self.TS // 3
 
+        self.action_btn = self.exit_btn = None
         self.can_move = True
         self.show_timer = pygame.time.get_ticks()
         self.show_delay = 2000
@@ -484,13 +542,24 @@ class GameOverScreen:
                 points = player.count_points
                 killed_enemies = player.killed_enemies
                 self.log[c] = [points, killed_enemies]
+        self.action_btn = Button('Продолжить' if self.isWin else "Повторить",
+                                 width=5 * self.k1 + self.k2,
+                                 height=self.k1, size=self.k2)
+        self.exit_btn = Button('В главное меню',
+                               width=5 * self.k1 + self.k2,
+                               height=self.k1, size=self.k2)
 
-    def update(self):
+    def update(self, mouse_state=None):
         now = pygame.time.get_ticks()
         if now - self.show_timer >= self.show_delay:
             self.can_move = False
+        if self.action_btn.click(mouse_state):
+            action = {'Продолжить': 'continue', 'Повторить': 'restart'}
+            self.game.set_feedback(action[self.action_btn.text])
+        elif self.exit_btn.click(mouse_state):
+            self.game.set_feedback('exit')
 
-    def render(self, screen):
+    def render(self, screen, mouse_pos=None):
         self.screen = pygame.transform.scale(self.screen,
                                              (screen.get_width(),
                                               screen.get_height()))
@@ -499,34 +568,45 @@ class GameOverScreen:
         self.screen.set_alpha(min(self.max_alpha_screen,
                                   self.screen.get_alpha() + 10))
         screen.blit(self.screen, (0, 0))
-        if self.screen.get_alpha() >= self.max_alpha_screen:
-            font = pygame.font.Font(None, self.k1)
-            rez_text = font.render('YOU WON' if self.isWin else "YOU LOSE",
-                                   False, pygame.Color('red'))
-            level = font.render(f"STAGE {self.game.level}",
-                                False, pygame.Color('orange'))
-            p1_nick = font.render(self.p1_nick, False, pygame.Color('yellow'))
+        if self.screen.get_alpha() < self.max_alpha_screen:
+            return
+        font = pygame.font.Font(None, self.k1)
+        rez_text = font.render('YOU WON' if self.isWin else "YOU LOSE",
+                               False, pygame.Color('red'))
+        level = font.render(f"STAGE {self.game.level}",
+                            False, pygame.Color('orange'))
+        p1_nick = font.render(self.p1_nick, False, pygame.Color('yellow'))
 
-            screen.blit(rez_text, (screen.get_width() // 2 -
-                                   rez_text.get_width() // 2, self.TS - 10))
-            screen.blit(level, (screen.get_width() // 2 -
-                                level.get_width() // 2, 2 * self.TS))
-            screen.blit(p1_nick, (screen.get_width() // 4 -
-                                  p1_nick.get_width() // 2, 2 * self.TS))
+        screen.blit(rez_text, (screen.get_width() // 2 -
+                               rez_text.get_width() // 2, self.TS - 10))
+        screen.blit(level, (screen.get_width() // 2 -
+                            level.get_width() // 2, 2 * self.TS))
+        screen.blit(p1_nick, (screen.get_width() // 4 -
+                              p1_nick.get_width() // 2, 2 * self.TS))
 
-            if self.game.count_players == 2:
-                p2_nick = font.render(self.p2_nick, False,
-                                      pygame.Color('green'))
-                screen.blit(p2_nick, (screen.get_width() * 3 // 4 -
-                                      p2_nick.get_width() // 2, 2 * self.TS))
+        if self.game.count_players == 2:
+            p2_nick = font.render(self.p2_nick, False,
+                                  pygame.Color('green'))
+            screen.blit(p2_nick, (screen.get_width() * 3 // 4 -
+                                  p2_nick.get_width() // 2, 2 * self.TS))
 
-            for i in range(len(self.tanks_img)):
-                screen.blit(self.tanks_img[i],
-                            (screen.get_width() // 2 -
-                             self.tanks_img[i].get_width() // 2,
-                             self.TS * 5 + (25 + self.TS) * i))
+        for i in range(len(self.tanks_img)):
+            screen.blit(self.tanks_img[i],
+                        (screen.get_width() // 2 -
+                         self.tanks_img[i].get_width() // 2,
+                         self.TS * 5 + (25 + self.TS) * i))
 
-            self.draw_log(screen)
+        sc_rect = screen.get_rect()
+        w, h = sc_rect.w, sc_rect.h
+        self.exit_btn.set_coords(2 * self.TS,
+                                 h - self.TS - self.exit_btn.height)
+        self.action_btn.set_coords(w - 2 * self.TS - self.exit_btn.width,
+                                     h - self.TS - self.exit_btn.height)
+
+        self.action_btn.draw(screen, mouse_pos)
+        self.exit_btn.draw(screen, mouse_pos)
+
+        self.draw_log(screen)
 
     def load_tanks_img(self):
         arr = []
@@ -546,12 +626,19 @@ class GameOverScreen:
             screen.blit(text, (x - text.get_width() // 2, y))
             for t_t in data[1].keys():
                 num_t = int(t_t[-1])
-                y1 = (self.TS * 5 + (25 + self.TS) * (num_t - 1)) + self.TS // 2
-                score_text = font.render(f'{data[1][t_t][1]} - '
-                                         f'{data[1][t_t][0]}', False,
+                y1 = (self.TS * 5 + (25 + self.TS) * (
+                        num_t - 1)) + self.TS // 2
+                score_text = font.render(f'Очки: {data[1][t_t][1]} - '
+                                         f'Кол-во: {data[1][t_t][0]}', False,
                                          pygame.Color('white'))
                 screen.blit(score_text, (x - score_text.get_width() // 2,
                                          y1 - score_text.get_height() // 2))
+        result = font.render(
+            f'TOTAL - {sum([i[0] for i in self.log.values()])}',
+            False, pygame.Color('white'))
+        screen.blit(result, (screen.get_width() // 2 - result.get_width() // 2,
+                             screen.get_height() - 3 * self.TS
+                             - result.get_height() // 2))
 
 
 class Game:
@@ -570,6 +657,7 @@ class Game:
         self.pl_sett = load_settings()['player_settings']
         self.screen = screen_surf
         self.game_over_screen = None
+        self.feedback = None
         self.pause_screen = PauseScreen(self, self.screen)
         self.pause_sc_timer = pygame.time.get_ticks()
         self.isGameOver = False
@@ -626,10 +714,11 @@ class Game:
     def create_eagle(self):
         # Создаем объект орла
         tile = self.map.get_objects('eagle')[0]
-        x, y = tile.x / self.map.koeff + OFFSET, tile.y / self.map.koeff + OFFSET
+        x, y = tile.x / self.map.koeff + OFFSET, tile.y / \
+               self.map.koeff + OFFSET
         return Eagle(self, x, y, self.TILE_SIZE)
 
-    def update(self, events=None, keystate=None):
+    def update(self, events=None, keystate=None, mouse_state=None):
         # Обновляем каждый элемент в игре
         if events is not None:
             # Если нажали кнопку паузы, то необходимо
@@ -641,7 +730,7 @@ class Game:
         if not self.is_pause:
             # Если игра проиграна, то необходимо отрисовать окно проигрыша
             if self.isGameOver:
-                self.game_over()
+                self.game_over(mouse_state)
                 if not self.game_over_screen.can_move:
                     return
             if any(map(lambda x: not x, self.is_music_changed)):
@@ -665,7 +754,7 @@ class Game:
         else:
             self.pause_screen.update()
 
-    def render(self):
+    def render(self, mouse_pos=None):
         # Отрисовка по слоям.
         """
         Карта может содержать подобные слои.
@@ -687,7 +776,7 @@ class Game:
         if self.is_pause:
             self.pause_screen.render(self.screen)
         if self.isGameOver:
-            self.game_over_screen.render(self.screen)
+            self.game_over_screen.render(self.screen, mouse_pos=mouse_pos)
 
     def is_game_over(self):
         # Если иничтожены все боты-враги, то игры выйграна
@@ -706,8 +795,11 @@ class Game:
             if self.isGameOver:
                 self.game_over_screen = GameOverScreen(self, self.screen)
 
-    def game_over(self):
-        self.game_over_screen.update()
+    def set_feedback(self, name):
+        self.feedback = name
+
+    def game_over(self, mouse_state):
+        self.game_over_screen.update(mouse_state=mouse_state)
         if self.isWin:
             pass
             # TODO Заготовка для будущей смены карты

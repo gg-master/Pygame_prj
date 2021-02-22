@@ -2,7 +2,7 @@ import pygame as pg
 
 import pygame.examples.eventlist
 pygame.examples.eventlist.main()
-pygame.key
+
 
 
 def change_alpha(orig_surf, alpha):
