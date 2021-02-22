@@ -484,11 +484,13 @@ class Button:
                 and self.y <= y1 <= self.y + self.height:
             win.blit(self.hover_image, (self.x, self.y))
             win.blit(text, (self.x + self.width / 2 - text.get_width() / 2,
-                            self.y + self.height / 2 - text.get_height() / 1.65))
+                            self.y + self.height / 2 -
+                            text.get_height() / 1.65))
         else:
             win.blit(self.normal_image, (self.x, self.y))
             win.blit(text, (self.x + self.width / 2 - text.get_width() / 2,
-                            self.y + self.height / 2 - text.get_height() / 1.9))
+                            self.y + self.height / 2 -
+                            text.get_height() / 1.9))
 
     def click(self, mouse_state):
         x1, y1 = mouse_state[0]
@@ -606,7 +608,7 @@ class GameOverScreen:
         self.exit_btn.set_coords(2 * self.TS,
                                  h - self.TS - self.exit_btn.height)
         self.action_btn.set_coords(w - 2 * self.TS - self.exit_btn.width,
-                                     h - self.TS - self.exit_btn.height)
+                                   h - self.TS - self.exit_btn.height)
 
         self.action_btn.draw(screen, mouse_pos)
         self.exit_btn.draw(screen, mouse_pos)
@@ -719,8 +721,8 @@ class Game:
     def create_eagle(self):
         # Создаем объект орла
         tile = self.map.get_objects('eagle')[0]
-        x, y = tile.x / self.map.koeff + OFFSET, tile.y / \
-               self.map.koeff + OFFSET
+        x = tile.x / self.map.koeff + OFFSET
+        y = tile.y / self.map.koeff + OFFSET
         return Eagle(self, x, y, self.TILE_SIZE)
 
     def update(self, events=None, keystate=None, mouse_state=None):

@@ -149,7 +149,8 @@ class MusicPlayer:
             else:
                 print('sound not found')
 
-    def stop_all(self):
+    @staticmethod
+    def stop_all():
         pygame.mixer.stop()
 
     def update(self, game):
