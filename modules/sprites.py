@@ -405,7 +405,6 @@ class Bullet(pygame.sprite.Sprite):
                 self.kill()
 
     def handling_recochet(self, c):
-        # TODO добавить звук рикошета
         rez = self.can_ricochet(c)
         if self.is_ricochet and c == self.from_ricochet:
             return True

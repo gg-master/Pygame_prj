@@ -4,6 +4,7 @@ import os
 from math import ceil
 from modules.sprites import Player, Bot, Eagle, Wall, EmptyBot
 from default_funcs import load_image, load_settings
+from random import choice
 
 """
 Карта должна содержать минимум эти слои.
@@ -50,10 +51,13 @@ class BotManager:
             raise Exception('Недостаточно игроков')
         from modules import mobs_count
         """Загружаем шаблон, по которому будут спавниться боты"""
-        # TODO когда необходимого шаблона нет, то
-        #  необходимо или зациклить или написать генератор шаблона
         try:
-            self.bot_comb = mobs_count.count[self.game.level]
+            # Если необходимого шаблона нет, то загружаем рандомный
+            if self.game.level not in mobs_count.count:
+                self.bot_comb = mobs_count.count[
+                    choice(list(mobs_count.count.keys()))]
+            else:
+                self.bot_comb = mobs_count.count[self.game.level]
             # self.bot_comb = mobs_count.count[10]
         except KeyError:
             raise KeyError('Комбинация ботов не найдена')
@@ -800,10 +804,6 @@ class Game:
 
     def game_over(self, mouse_state):
         self.game_over_screen.update(mouse_state=mouse_state)
-        if self.isWin:
-            pass
-            # TODO Заготовка для будущей смены карты
-            # self.__init__(self.type_game, self.level + 1, self.screen)
 
     def add_music_track(self, name):
         self.track_list.append(name)
