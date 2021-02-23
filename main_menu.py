@@ -31,6 +31,7 @@ lvl_scr = pg.transform.scale(pg.image.load('style/data/system_image/'
                                          'ch_lvl_bckgrnd.png'), (WIDTH, HEIGHT))
 lvl_scrn = pg.Surface(screen.get_size())
 lvl_scrn.blit(lvl_scr, (0, 0))
+lvl_image = pg.transform.scale(pg.image.load('style/data/system_image/lvl.jpg'), (round(WIDTH * 0.32447916), round(HEIGHT * 0.56296)))
 border = pg.transform.scale(pg.image.load('style/data/system_image/'
                                          'border.png'), (round(WIDTH * 0.390625), round(HEIGHT * 0.6944444)))
 tanks_battle = pg.image.load('style/data/system_image/TanksBattle.png')
@@ -38,6 +39,7 @@ tanks_battle_rect = tanks_battle.get_rect()
 bck_dark = pg.Surface((WIDTH, HEIGHT))
 bck_dark.fill((0, 0, 0))
 bck_dark.set_alpha(100)
+map_index = (1, 1)
 pause = False
 exit_wnd_f = False
 settings_wnd_f = False
@@ -56,7 +58,6 @@ def change_exit_f():
     exit_wnd_f = not exit_wnd_f
     change_pause()
     return [start_screen, (False, )]
-    # return wnd_manager()
 
 
 def change_settings_f():
@@ -83,6 +84,12 @@ def default_settings():
 def change_pause():
     global pause
     pause = not pause
+
+
+def change_lvl_image(index):
+    global lvl_image, map_index
+    map_index = list(map(int, index.split('_')))
+    lvl_image = pg.transform.scale(pg.image.load(f'style/data/system_image/lvl{index}.jpg'), (round(WIDTH * 0.32447916), round(HEIGHT * 0.56296)))
 
 
 class InputBox:
@@ -128,12 +135,6 @@ class InputBox:
                     self.active = False
         self.text = self.text[:10]
         self.txt_surface = self.font.render(self.text, True, self.color)
-
-    def update(self):
-        pass
-        # Resize the box if the text is too long.
-        # width = max(self.rect.width, self.txt_surface.get_width()+10)
-        # self.rect.w = width
 
     def draw(self, screen):
         if not self.centering:
@@ -330,7 +331,7 @@ class ConfirmWindow:
 
 
 class Button:
-    def __init__(self, text, x, y, width=round(WIDTH * 0.32083), height=round(HEIGHT * 0.0629629), size=round(WIDTH * 0.02083), limit=(0, 0)):
+    def __init__(self, text, x, y, width=round(WIDTH * 0.32083), height=round(HEIGHT * 0.0629629), size=round(WIDTH * 0.02083), limit=(0, 0), index=''):
         self.text = text
         self.x = x
         self.y = y
@@ -338,7 +339,7 @@ class Button:
         self.limit_y = limit[1]
         self.size = size
         self.normal_image = pg.transform.scale(pg.image.load('style/data/system_image/'
-                                          '0_02.png'), (width, height))
+                                          'button_normal.png'), (width, height))
         self.hover_image = pg.transform.scale(pg.image.load('style/data/system_image/'
                                          'button_hovered.png'), (width, height))
         self.width, self.height = self.normal_image.get_rect().size
@@ -370,46 +371,30 @@ class Button:
             return []
 
 
-def two_players_screen():
+def choose_level_screen(typ):
     run = True
     while run:
         for event in pg.event.get():
             if event.type == pg.QUIT:
                 terminate()
             if event.type == pg.MOUSEBUTTONDOWN and event.button == 1:
-                response = [btn.click(event.pos, act, arg)
-                            for btn, act, arg in lvl_scrn_buttons]
+                if typ[0] == 1:
+                    response = [btn.click(event.pos, act, arg)
+                                for btn, act, arg in lvl_scrn_buttons_1]
+                else:
+                    response = [btn.click(event.pos, act, arg)
+                                for btn, act, arg in lvl_scrn_buttons_2]
                 for x in response:
                     if len(x):
                         return x
                 pg.time.delay(1)
         st_screen.fill((0, 0, 0))
         st_screen.blit(lvl_scrn, (0, 0))
-        [i[0].draw(st_screen) for i in lvl_scrn_buttons]
-        st_screen.blit(lvls[0], (WIDTH * 0.60677083, HEIGHT * 0.1185))
-        st_screen.blit(border, (WIDTH * 0.57291666, HEIGHT * 0.05))
-        screen.blit(st_screen, (0, 0))
-        pg.display.flip()
-        clock.tick(FPS)
-
-
-def choose_level_screen():
-    run = True
-    while run:
-        for event in pg.event.get():
-            if event.type == pg.QUIT:
-                terminate()
-            if event.type == pg.MOUSEBUTTONDOWN and event.button == 1:
-                response = [btn.click(event.pos, act, arg)
-                            for btn, act, arg in lvl_scrn_buttons]
-                for x in response:
-                    if len(x):
-                        return x
-                pg.time.delay(1)
-        st_screen.fill((0, 0, 0))
-        st_screen.blit(lvl_scrn, (0, 0))
-        [i[0].draw(st_screen) for i in lvl_scrn_buttons]
-        st_screen.blit(lvls[0], (WIDTH * 0.60677083, HEIGHT * 0.1185))
+        if typ[0] == 1:
+            [i[0].draw(st_screen) for i in lvl_scrn_buttons_1]
+        else:
+            [i[0].draw(st_screen) for i in lvl_scrn_buttons_2]
+        st_screen.blit(lvl_image, (WIDTH * 0.60677083, HEIGHT * 0.1185))
         st_screen.blit(border, (WIDTH * 0.57291666, HEIGHT * 0.05))
         screen.blit(st_screen, (0, 0))
         pg.display.flip()
@@ -529,7 +514,7 @@ def start_screen(is_first):
                 if pg.mouse.get_pressed()[0]:
                     setting_window.music_bar.click(pg.mouse.get_pos())
                     setting_window.effects_bar.click(pg.mouse.get_pos())
-                [(i.update(), i.draw(screen)) for i in setting_window.line_edits_arr]
+                [(i.draw(screen)) for i in setting_window.line_edits_arr]
             if exit_wnd_f:
                 [i[0].draw(screen) for i in close_win_buttons]
             if settings_wnd_f:
@@ -580,8 +565,8 @@ exit_window = ConfirmWindow('Подтвреждение', 'Вы действит
 setting_window = SettingsWindow()
 
 
-game_mode_buttons = [[Button('Играть', WIDTH * 0.34, HEIGHT * 0.5, width=int(0.321 * WIDTH), height=int(0.063 * HEIGHT)), choose_level_screen, (False, )],
-                     [Button('Игра с другом', WIDTH * 0.34, HEIGHT * 0.574, width=int(0.321 * WIDTH), height=int(0.063 * HEIGHT)), False, (False, )],
+game_mode_buttons = [[Button('Играть', WIDTH * 0.34, HEIGHT * 0.5, width=int(0.321 * WIDTH), height=int(0.063 * HEIGHT)), choose_level_screen, (1, )],
+                     [Button('Игра с другом', WIDTH * 0.34, HEIGHT * 0.574, width=int(0.321 * WIDTH), height=int(0.063 * HEIGHT)), choose_level_screen, (2, )],
                      [Button('Назад', WIDTH * 0.34, HEIGHT * 0.648, width=int(0.321 * WIDTH), height=int(0.063 * HEIGHT)), start_screen, (False, False)]]
 
 
@@ -590,58 +575,32 @@ settings_wnd_btns = [[Button('Сохранить', WIDTH * 0.491666, HEIGHT * 0.
                      [Button('По умолчанию', WIDTH * 0.4135416, HEIGHT * 0.682407, width=int(WIDTH * 0.1), height=int(HEIGHT * 0.03), size=round(WIDTH * 0.010416), limit=(20, 0)), default_settings, (False, )]]
 
 
-lvl_scrn_buttons = [[Button('Уровень 1', -WIDTH * 0.0260416, HEIGHT * 0.05, width=int(WIDTH * 0.25), height=int(HEIGHT * 0.05), limit=(90, 0)), False, (False,)],
-                    [Button('Уровень 1', -WIDTH * 0.0260416, HEIGHT * 0.11, width=int(WIDTH * 0.25), height=int(HEIGHT * 0.05), limit=(90, 0)), False, (False,)],
-                    [Button('Уровень 1', -WIDTH * 0.0260416, HEIGHT * 0.17, width=int(WIDTH * 0.25), height=int(HEIGHT * 0.05), limit=(90, 0)), False, (False,)],
-                    [Button('Уровень 1', -WIDTH * 0.0260416, HEIGHT * 0.23, width=int(WIDTH * 0.25), height=int(HEIGHT * 0.05), limit=(90, 0)), False, (False,)],
-                    [Button('Уровень 1', -WIDTH * 0.0260416, HEIGHT * 0.29, width=int(WIDTH * 0.25), height=int(HEIGHT * 0.05), limit=(90, 0)), False, (False,)],
-                    [Button('Уровень 1', -WIDTH * 0.0260416, HEIGHT * 0.35, width=int(WIDTH * 0.25), height=int(HEIGHT * 0.05), limit=(90, 0)), False, (False,)],
-                    [Button('Уровень 1', -WIDTH * 0.0260416, HEIGHT * 0.41, width=int(WIDTH * 0.25), height=int(HEIGHT * 0.05), limit=(90, 0)), False, (False,)],
-                    [Button('Уровень 1', -WIDTH * 0.0260416, HEIGHT * 0.47, width=int(WIDTH * 0.25), height=int(HEIGHT * 0.05), limit=(90, 0)), False, (False,)],
-                    [Button('Уровень 1', -WIDTH * 0.0260416, HEIGHT * 0.53, width=int(WIDTH * 0.25), height=int(HEIGHT * 0.05), limit=(90, 0)), False, (False,)],
-                    [Button('Уровень 1', -WIDTH * 0.0260416, HEIGHT * 0.59, width=int(WIDTH * 0.25), height=int(HEIGHT * 0.05), limit=(90, 0)), False, (False,)],
-                    [Button('Уровень 1', -WIDTH * 0.0260416, HEIGHT * 0.65, width=int(WIDTH * 0.25), height=int(HEIGHT * 0.05), limit=(90, 0)), False, (False,)],
-                    [Button('Уровень 1', -WIDTH * 0.0260416, HEIGHT * 0.71, width=int(WIDTH * 0.25), height=int(HEIGHT * 0.05), limit=(90, 0)), False, (False,)],
-                    [Button('Уровень 1', WIDTH * 0.1822916, HEIGHT * 0.05, width=int(WIDTH * 0.25), height=int(HEIGHT * 0.05), limit=(90, 0)), False, (False,)],
-                    [Button('Уровень 1', WIDTH * 0.1822916, HEIGHT * 0.11, width=int(WIDTH * 0.25), height=int(HEIGHT * 0.05), limit=(90, 0)), False, (False,)],
-                    [Button('Уровень 1', WIDTH * 0.1822916, HEIGHT * 0.17, width=int(WIDTH * 0.25), height=int(HEIGHT * 0.05), limit=(90, 0)), False, (False,)],
-                    [Button('Уровень 1', WIDTH * 0.1822916, HEIGHT * 0.23, width=int(WIDTH * 0.25), height=int(HEIGHT * 0.05), limit=(90, 0)), False, (False,)],
-                    [Button('Уровень 1', WIDTH * 0.1822916, HEIGHT * 0.29, width=int(WIDTH * 0.25), height=int(HEIGHT * 0.05), limit=(90, 0)), False, (False,)],
-                    [Button('Уровень 1', WIDTH * 0.1822916, HEIGHT * 0.35, width=int(WIDTH * 0.25), height=int(HEIGHT * 0.05), limit=(90, 0)), False, (False,)],
-                    [Button('Уровень 1', WIDTH * 0.1822916, HEIGHT * 0.41, width=int(WIDTH * 0.25), height=int(HEIGHT * 0.05), limit=(90, 0)), False, (False,)],
-                    [Button('Уровень 1', WIDTH * 0.1822916, HEIGHT * 0.47, width=int(WIDTH * 0.25), height=int(HEIGHT * 0.05), limit=(90, 0)), False, (False,)],
-                    [Button('Уровень 1', WIDTH * 0.1822916, HEIGHT * 0.53, width=int(WIDTH * 0.25), height=int(HEIGHT * 0.05), limit=(90, 0)), False, (False,)],
-                    [Button('Уровень 1', WIDTH * 0.1822916, HEIGHT * 0.59, width=int(WIDTH * 0.25), height=int(HEIGHT * 0.05), limit=(90, 0)), False, (False,)],
-                    [Button('Уровень 1', WIDTH * 0.1822916, HEIGHT * 0.65, width=int(WIDTH * 0.25), height=int(HEIGHT * 0.05), limit=(90, 0)), False, (False,)],
-                    [Button('Уровень 1', WIDTH * 0.1822916, HEIGHT * 0.71, width=int(WIDTH * 0.25), height=int(HEIGHT * 0.05), limit=(90, 0)), False, (False,)],
-                    [Button('Назад', WIDTH * 0.04427083, HEIGHT * 0.85, width=int(0.321 * WIDTH), height=int(0.063 * HEIGHT)), game_mode_screen, (False,)],
-                    [Button('Играть', WIDTH * 0.611979166, HEIGHT * 0.85, width=int(0.321 * WIDTH), height=int(0.063 * HEIGHT)), False, (False,)]]
+lvl_scrn_buttons_1 = [[Button('Уровень 1', -WIDTH * 0.0260416, HEIGHT * 0.05, width=int(WIDTH * 0.25), height=int(HEIGHT * 0.05), limit=(90, 0)), change_lvl_image, ('1_1',)],
+                      [Button('Уровень 1', -WIDTH * 0.0260416, HEIGHT * 0.11, width=int(WIDTH * 0.25), height=int(HEIGHT * 0.05), limit=(90, 0)), change_lvl_image, ('1_2',)],
+                      [Button('Уровень 1', -WIDTH * 0.0260416, HEIGHT * 0.17, width=int(WIDTH * 0.25), height=int(HEIGHT * 0.05), limit=(90, 0)), change_lvl_image, ('1_3',)],
+                      [Button('Уровень 1', -WIDTH * 0.0260416, HEIGHT * 0.23, width=int(WIDTH * 0.25), height=int(HEIGHT * 0.05), limit=(90, 0)), change_lvl_image, ('1_4',)],
+                      [Button('Уровень 1', -WIDTH * 0.0260416, HEIGHT * 0.29, width=int(WIDTH * 0.25), height=int(HEIGHT * 0.05), limit=(90, 0)), change_lvl_image, ('1_5',)],
+                      [Button('Уровень 1', -WIDTH * 0.0260416, HEIGHT * 0.35, width=int(WIDTH * 0.25), height=int(HEIGHT * 0.05), limit=(90, 0)), change_lvl_image, ('1_6',)],
+                      [Button('Уровень 1', -WIDTH * 0.0260416, HEIGHT * 0.41, width=int(WIDTH * 0.25), height=int(HEIGHT * 0.05), limit=(90, 0)), change_lvl_image, ('1_7',)],
+                      [Button('Уровень 1', -WIDTH * 0.0260416, HEIGHT * 0.47, width=int(WIDTH * 0.25), height=int(HEIGHT * 0.05), limit=(90, 0)), change_lvl_image, ('1_8',)],
+                      [Button('Уровень 1', -WIDTH * 0.0260416, HEIGHT * 0.53, width=int(WIDTH * 0.25), height=int(HEIGHT * 0.05), limit=(90, 0)), change_lvl_image, ('1_9',)],
+                      [Button('Уровень 1', -WIDTH * 0.0260416, HEIGHT * 0.59, width=int(WIDTH * 0.25), height=int(HEIGHT * 0.05), limit=(90, 0)), change_lvl_image, ('1_10',)],
+                      [Button('Назад', WIDTH * 0.04427083, HEIGHT * 0.85, width=int(0.321 * WIDTH), height=int(0.063 * HEIGHT)), game_mode_screen, (False,)],
+                      [Button('Играть', WIDTH * 0.611979166, HEIGHT * 0.85, width=int(0.321 * WIDTH), height=int(0.063 * HEIGHT)), False, (False,)]]
 
 
-lvls = [pg.transform.scale(pg.image.load('style/data/system_image/lvl.jpg'), (round(WIDTH * 0.32447916), round(HEIGHT * 0.56296))),
-        pg.image.load('style/data/system_image/lvl.jpg'),
-        pg.image.load('style/data/system_image/lvl.jpg'),
-        pg.image.load('style/data/system_image/lvl.jpg'),
-        pg.image.load('style/data/system_image/lvl.jpg'),
-        pg.image.load('style/data/system_image/lvl.jpg'),
-        pg.image.load('style/data/system_image/lvl.jpg'),
-        pg.image.load('style/data/system_image/lvl.jpg'),
-        pg.image.load('style/data/system_image/lvl.jpg'),
-        pg.image.load('style/data/system_image/lvl.jpg'),
-        pg.image.load('style/data/system_image/lvl.jpg'),
-        pg.image.load('style/data/system_image/lvl.jpg'),
-        pg.image.load('style/data/system_image/lvl.jpg'),
-        pg.image.load('style/data/system_image/lvl.jpg'),
-        pg.image.load('style/data/system_image/lvl.jpg'),
-        pg.image.load('style/data/system_image/lvl.jpg'),
-        pg.image.load('style/data/system_image/lvl.jpg'),
-        pg.image.load('style/data/system_image/lvl.jpg'),
-        pg.image.load('style/data/system_image/lvl.jpg'),
-        pg.image.load('style/data/system_image/lvl.jpg'),
-        pg.image.load('style/data/system_image/lvl.jpg'),
-        pg.image.load('style/data/system_image/lvl.jpg'),
-        pg.image.load('style/data/system_image/lvl.jpg'),
-        pg.image.load('style/data/system_image/lvl.jpg'),]
+lvl_scrn_buttons_2 = [[Button('Уровень 1', -WIDTH * 0.0260416, HEIGHT * 0.05, width=int(WIDTH * 0.25), height=int(HEIGHT * 0.05), limit=(90, 0)), change_lvl_image, ('2_1',)],
+                      [Button('Уровень 1', -WIDTH * 0.0260416, HEIGHT * 0.11, width=int(WIDTH * 0.25), height=int(HEIGHT * 0.05), limit=(90, 0)), change_lvl_image, ('2_2',)],
+                      [Button('Уровень 1', -WIDTH * 0.0260416, HEIGHT * 0.17, width=int(WIDTH * 0.25), height=int(HEIGHT * 0.05), limit=(90, 0)), change_lvl_image, ('2_3',)],
+                      [Button('Уровень 1', -WIDTH * 0.0260416, HEIGHT * 0.23, width=int(WIDTH * 0.25), height=int(HEIGHT * 0.05), limit=(90, 0)), change_lvl_image, ('2_4',)],
+                      [Button('Уровень 1', -WIDTH * 0.0260416, HEIGHT * 0.29, width=int(WIDTH * 0.25), height=int(HEIGHT * 0.05), limit=(90, 0)), change_lvl_image, ('2_5',)],
+                      [Button('Уровень 1', -WIDTH * 0.0260416, HEIGHT * 0.35, width=int(WIDTH * 0.25), height=int(HEIGHT * 0.05), limit=(90, 0)), change_lvl_image, ('2_6',)],
+                      [Button('Уровень 1', -WIDTH * 0.0260416, HEIGHT * 0.41, width=int(WIDTH * 0.25), height=int(HEIGHT * 0.05), limit=(90, 0)), change_lvl_image, ('2_7',)],
+                      [Button('Уровень 1', -WIDTH * 0.0260416, HEIGHT * 0.47, width=int(WIDTH * 0.25), height=int(HEIGHT * 0.05), limit=(90, 0)), change_lvl_image, ('2_8',)],
+                      [Button('Уровень 1', -WIDTH * 0.0260416, HEIGHT * 0.53, width=int(WIDTH * 0.25), height=int(HEIGHT * 0.05), limit=(90, 0)), change_lvl_image, ('2_9',)],
+                      [Button('Уровень 1', -WIDTH * 0.0260416, HEIGHT * 0.59, width=int(WIDTH * 0.25), height=int(HEIGHT * 0.05), limit=(90, 0)), change_lvl_image, ('2_10',)],
+                      [Button('Назад', WIDTH * 0.04427083, HEIGHT * 0.85, width=int(0.321 * WIDTH), height=int(0.063 * HEIGHT)), game_mode_screen, (False,)],
+                      [Button('Играть', WIDTH * 0.611979166, HEIGHT * 0.85, width=int(0.321 * WIDTH), height=int(0.063 * HEIGHT)), False, (False,)]]
 
 
 def main():
