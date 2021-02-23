@@ -4,7 +4,7 @@ from game import Game
 from default_funcs import load_settings, load_image
 from time import sleep
 
-WIDTH, HEIGHT = 1100, 800
+WIDTH, HEIGHT = 950, 750
 FPS = 60
 
 pygame.init()
