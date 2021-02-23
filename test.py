@@ -1,5 +1,9 @@
 import pygame as pg
 
+import pygame.examples.eventlist
+pygame.examples.eventlist.main()
+
+
 
 def change_alpha(orig_surf, alpha):
     """Create a copy of orig_surf with the desired alpha value.
@@ -51,7 +55,7 @@ def main():
         clock.tick(30)
 
 
-if __name__ == '__main__':
-    pg.init()
-    main()
-    pg.quit()
+# if __name__ == '__main__':
+#     pg.init()
+#     main()
+#     pg.quit()
