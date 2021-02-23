@@ -28,8 +28,9 @@ TILE_FOR_PLAYERS = 16
 TILE_FOR_MOBS = 17
 
 
-def set_constans_from_settings():
+def set_constans_from_settings(screen_surf):
     global MAP_SIZE, OFFSET
+    # TODO разобраться с масштабируемостью карты
     settings = load_settings()['game_settings']
     MAP_SIZE = settings['MAP_SIZE']
     OFFSET = settings['OFFSET']
@@ -297,6 +298,9 @@ class Map:
 
 
 class Menu(pygame.sprite.Sprite):
+    """
+    Класс отвечающий за отриосвку меню (справа от поля)
+    """
     images = {
         'bots': 'bots.png',
         'flag': 'level_flag.png',
@@ -418,6 +422,9 @@ class Menu(pygame.sprite.Sprite):
 
 
 class PauseScreen:
+    """
+    Класс, который отвечает за отрисовку окна паузы
+    """
     def __init__(self, game, screen):
         self.game = game
         self.pscreen = pygame.Surface((screen.get_rect().w,
@@ -448,6 +455,9 @@ class PauseScreen:
 
 
 class Button:
+    """
+    Класс кнопки
+    """
     def __init__(self, text, x=0, y=0, width=616, height=68, size=40,
                  limit=(0, 0)):
         self.text = text
@@ -478,6 +488,7 @@ class Button:
 
     def draw(self, win, mouse_pos):
         x1, y1 = mouse_pos
+        # Узнаем позицию и отталкиваясь от этого реагируем как либо на это
         font = pygame.font.SysFont("comicsans", self.size)
         text = font.render(self.text, True, (255, 255, 255))
         if self.x + self.limit_x <= x1 <= self.x + self.width - self.limit_x \
@@ -493,6 +504,8 @@ class Button:
                             text.get_height() / 1.9))
 
     def click(self, mouse_state):
+        # Обработка клика (если координаты мышки над нашей
+        # кнопкой и был клик левой кнопкой мыши, то возвращаем True
         x1, y1 = mouse_state[0]
         is_click = mouse_state[1][0]
         if not is_click:
@@ -500,13 +513,15 @@ class Button:
         if (self.x + self.limit_x <= x1 <=
                 self.x + self.width - self.limit_x and
                 self.y <= y1 <= self.y + self.height):
-            # todo проигывание звука клика по кнопке
             return True
         else:
             return None
 
 
 class GameOverScreen:
+    """
+    Класс отвечающий за окно после боя
+    """
     images = {
         't1': 'tanks_texture/t1/t_w.png',
         't2': 'tanks_texture/t2/t_w.png',
@@ -529,10 +544,11 @@ class GameOverScreen:
         self.TS = self.game.TILE_SIZE
         self.tanks_img = self.load_tanks_img()
 
+        # Установка коэффециентов
         self.k1 = self.TS
         self.k2 = self.TS // 2
         self.k3 = self.TS // 3
-
+        # Содание кнопок
         self.action_btn = self.exit_btn = None
         self.can_move = True
         self.show_timer = pygame.time.get_ticks()
@@ -542,6 +558,8 @@ class GameOverScreen:
         self.load_log()
 
     def load_log(self):
+        """Загружает информацию о количестве убитых игроками ботов
+        а также формирует кнопки"""
         c = 0
         for player in [self.game.player1, self.game.player2]:
             c += 1
@@ -549,6 +567,7 @@ class GameOverScreen:
                 points = player.count_points
                 killed_enemies = player.killed_enemies
                 self.log[c] = [points, killed_enemies]
+
         self.action_btn = Button('Продолжить' if self.isWin else "Повторить",
                                  width=5 * self.k1 + self.k2,
                                  height=self.k1, size=self.k2)
@@ -558,8 +577,10 @@ class GameOverScreen:
 
     def update(self, mouse_state=None):
         now = pygame.time.get_ticks()
+        # После установления результата игры некоторое время буздействуем
         if now - self.show_timer >= self.show_delay:
             self.can_move = False
+        # Обработка нажатий на кнопки
         if self.action_btn.click(mouse_state):
             action = {'Продолжить': 'continue', 'Повторить': 'restart'}
             self.game.set_feedback(action[self.action_btn.text])
@@ -567,11 +588,13 @@ class GameOverScreen:
             self.game.set_feedback('exit')
 
     def render(self, screen, mouse_pos=None):
+        """Отрисовка всей информации + кнопок"""
         self.screen = pygame.transform.scale(self.screen,
                                              (screen.get_width(),
                                               screen.get_height()))
         if self.can_move:
             return
+        # Анимация плавного появления экрана
         self.screen.set_alpha(min(self.max_alpha_screen,
                                   self.screen.get_alpha() + 10))
         screen.blit(self.screen, (0, 0))
@@ -616,6 +639,7 @@ class GameOverScreen:
         self.draw_log(screen)
 
     def load_tanks_img(self):
+        """Загрузка изображения танков"""
         arr = []
         for i in ['t1', 't2', 't3', 't4']:
             img = load_image(self.images[i])
@@ -623,6 +647,7 @@ class GameOverScreen:
         return arr.copy()
 
     def draw_log(self, screen):
+        """Отрисовка статистика"""
         x, y = screen.get_width() // 4, 3 * self.TS + 30
         font = pygame.font.Font(None, self.k2 + 15)
         for k in self.log.keys():
@@ -650,7 +675,7 @@ class GameOverScreen:
 
 class Game:
     def __init__(self, type_game, number_level, screen_surf):
-        set_constans_from_settings()
+        set_constans_from_settings(screen_surf)
 
         self.map = Map(number_level, MAP_SIZE)
         self.map_object = self.map.map
@@ -810,9 +835,11 @@ class Game:
         self.game_over_screen.update(mouse_state=mouse_state)
 
     def add_music_track(self, name):
+        # Добавляет название трека в списко треков
         self.track_list.append(name)
 
     def get_track_list(self):
+        # Возвращает списко с названиями треков. После чего очищает себя
         tr_ls = self.track_list.copy()
         self.track_list.clear()
         return tr_ls
