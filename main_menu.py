@@ -1,5 +1,4 @@
 from constants import *
-from default_funcs import *
 import pygame as pg
 import sys
 import os
@@ -34,7 +33,7 @@ lvl_scrn = pg.Surface(screen.get_size())
 lvl_scrn.blit(lvl_scr, (0, 0))
 border = pg.transform.scale(pg.image.load('style/data/system_image/'
                                          'border.png'), (round(WIDTH * 0.390625), round(HEIGHT * 0.6944444)))
-tanks_battle = load_image(GAME_HEADER_PATH)
+tanks_battle = pg.image.load('style/data/system_image/TanksBattle.png')
 tanks_battle_rect = tanks_battle.get_rect()
 bck_dark = pg.Surface((WIDTH, HEIGHT))
 bck_dark.fill((0, 0, 0))
@@ -47,8 +46,9 @@ is_save = False
 bck_is_drk = False
 
 
-def func():
-    pass
+def terminate():
+    pg.quit()
+    sys.exit()
 
 
 def change_exit_f():
@@ -116,7 +116,6 @@ class InputBox:
             if self.active:
                 if self.usual:
                     if event.key == pg.K_RETURN:
-                        print(self.text)
                         self.text = ''
                     elif event.key == pg.K_BACKSPACE:
                         self.text = self.text[:-1]
@@ -124,6 +123,7 @@ class InputBox:
                         self.text += event.unicode
                 else:
                     self.text = pg.key.name(event.key)
+                    self.text = f'keypad {self.text.split("[")[1].split("]")[0]}' if '[' in self.text or ']' in self.text else self.text
                     self.btn = event.key
                     self.active = False
         self.text = self.text[:10]
@@ -236,26 +236,26 @@ class SettingsWindow:
             data = json.load(file)
             self.first_player_nick = data["player_settings"]["first_player_nick"]
             self.second_player_nick = data["player_settings"]["second_player_nick"]
-            self.forward_btn_1 = list(data["player_settings"]["forward_move_btn_1"].values())[0]
-            self.forward_btn_1_text = list(data["player_settings"]["forward_move_btn_1"].keys())[0]
-            self.back_btn_1 = list(data["player_settings"]["back_move_btn_1"].values())[0]
-            self.back_btn_1_text = list(data["player_settings"]["back_move_btn_1"].keys())[0]
-            self.left_btn_1 = list(data["player_settings"]["left_move_btn_1"].values())[0]
-            self.left_btn_1_text = list(data["player_settings"]["left_move_btn_1"].keys())[0]
-            self.right_btn_1 = list(data["player_settings"]["right_move_btn_1"].values())[0]
-            self.right_btn_1_text = list(data["player_settings"]["right_move_btn_1"].keys())[0]
-            self.shoot_btn_1 = list(data["player_settings"]["shoot_btn_1"].values())[0]
-            self.shoot_btn_1_text = list(data["player_settings"]["shoot_btn_1"].keys())[0]
-            self.forward_btn_2 = list(data["player_settings"]["forward_move_btn_2"].values())[0]
-            self.forward_btn_2_text = list(data["player_settings"]["forward_move_btn_2"].keys())[0]
-            self.back_btn_2 = list(data["player_settings"]["back_move_btn_2"].values())[0]
-            self.back_btn_2_text = list(data["player_settings"]["back_move_btn_2"].keys())[0]
-            self.left_btn_2 = list(data["player_settings"]["left_move_btn_2"].values())[0]
-            self.left_btn_2_text = list(data["player_settings"]["left_move_btn_2"].keys())[0]
-            self.right_btn_2 = list(data["player_settings"]["right_move_btn_2"].values())[0]
-            self.right_btn_2_text = list(data["player_settings"]["right_move_btn_2"].keys())[0]
-            self.shoot_btn_2 = list(data["player_settings"]["shoot_btn_2"].values())[0]
-            self.shoot_btn_2_text = list(data["player_settings"]["shoot_btn_2"].keys())[0]
+            self.forward_btn_1 = data["player_settings"]["forward_move_btn_1"]
+            self.forward_btn_1_text = data["player_settings"]["forward_move_btn_1"]
+            self.back_btn_1 = data["player_settings"]["back_move_btn_1"]
+            self.back_btn_1_text = data["player_settings"]["back_move_btn_1"]
+            self.left_btn_1 = data["player_settings"]["left_move_btn_1"]
+            self.left_btn_1_text = data["player_settings"]["left_move_btn_1"]
+            self.right_btn_1 = data["player_settings"]["right_move_btn_1"]
+            self.right_btn_1_text = data["player_settings"]["right_move_btn_1"]
+            self.shoot_btn_1 = data["player_settings"]["shoot_btn_1"]
+            self.shoot_btn_1_text = data["player_settings"]["shoot_btn_1"]
+            self.forward_btn_2 = data["player_settings"]["forward_move_btn_2"]
+            self.forward_btn_2_text = data["player_settings"]["forward_move_btn_2"]
+            self.back_btn_2 = data["player_settings"]["back_move_btn_2"]
+            self.back_btn_2_text = data["player_settings"]["back_move_btn_2"]
+            self.left_btn_2 = data["player_settings"]["left_move_btn_2"]
+            self.left_btn_2_text = data["player_settings"]["left_move_btn_2"]
+            self.right_btn_2 = data["player_settings"]["right_move_btn_2"]
+            self.right_btn_2_text = data["player_settings"]["right_move_btn_2"]
+            self.shoot_btn_2 = data["player_settings"]["shoot_btn_2"]
+            self.shoot_btn_2_text = data["player_settings"]["shoot_btn_2"]
             self.music_bar = SliderBar(round(WIDTH * 0.359375), round(HEIGHT * 0.388888),round( WIDTH * 0.0078125), round(HEIGHT * 0.23148), True, value=data["player_settings"]["music"])
             self.effects_bar = SliderBar(round(WIDTH * 0.41145833), round(HEIGHT * 0.388888), round(WIDTH * 0.0078125), round(HEIGHT * 0.23148), True, value=data["player_settings"]["effects"], music=1)
         pg.mixer.music.set_volume(data["player_settings"]["music"] / 100)
@@ -285,16 +285,16 @@ class SettingsWindow:
         data['player_settings']['effects'] = self.effects_bar.value
         data['player_settings']['first_player_nick'] = self.line_edits_arr[0].text
         data['player_settings']['second_player_nick'] = self.line_edits_arr[1].text
-        data['player_settings']['forward_move_btn_1'] = {self.line_edits_arr[2].text: self.line_edits_arr[2].btn}
-        data['player_settings']['forward_move_btn_2'] = {self.line_edits_arr[3].text: self.line_edits_arr[3].btn}
-        data['player_settings']['back_move_btn_1'] = {self.line_edits_arr[4].text: self.line_edits_arr[4].btn}
-        data['player_settings']['back_move_btn_2'] = {self.line_edits_arr[5].text: self.line_edits_arr[5].btn}
-        data['player_settings']['left_move_btn_1'] = {self.line_edits_arr[6].text: self.line_edits_arr[6].btn}
-        data['player_settings']['left_move_btn_2'] = {self.line_edits_arr[7].text: self.line_edits_arr[7].btn}
-        data['player_settings']['right_move_btn_1'] = {self.line_edits_arr[8].text: self.line_edits_arr[8].btn}
-        data['player_settings']['right_move_btn_2'] = {self.line_edits_arr[9].text: self.line_edits_arr[9].btn}
-        data['player_settings']['shoot_btn_1'] = {self.line_edits_arr[10].text: self.line_edits_arr[10].btn}
-        data['player_settings']['shoot_btn_2'] = {self.line_edits_arr[11].text: self.line_edits_arr[11].btn}
+        data['player_settings']['forward_move_btn_1'] = self.line_edits_arr[2].text
+        data['player_settings']['forward_move_btn_2'] = self.line_edits_arr[3].text
+        data['player_settings']['back_move_btn_1'] = self.line_edits_arr[4].text
+        data['player_settings']['back_move_btn_2'] = self.line_edits_arr[5].text
+        data['player_settings']['left_move_btn_1'] = self.line_edits_arr[6].text
+        data['player_settings']['left_move_btn_2'] = self.line_edits_arr[7].text
+        data['player_settings']['right_move_btn_1'] = self.line_edits_arr[8].text
+        data['player_settings']['right_move_btn_2'] = self.line_edits_arr[9].text
+        data['player_settings']['shoot_btn_1'] = self.line_edits_arr[10].text
+        data['player_settings']['shoot_btn_2'] = self.line_edits_arr[11].text
         music_v, sound_v = self.music_bar.value / 100, self.effects_bar.value / 100
         pg.mixer.music.set_volume(music_v)
         click_sound.set_volume(sound_v)
@@ -368,6 +368,29 @@ class Button:
                 return [action]
         else:
             return []
+
+
+def two_players_screen():
+    run = True
+    while run:
+        for event in pg.event.get():
+            if event.type == pg.QUIT:
+                terminate()
+            if event.type == pg.MOUSEBUTTONDOWN and event.button == 1:
+                response = [btn.click(event.pos, act, arg)
+                            for btn, act, arg in lvl_scrn_buttons]
+                for x in response:
+                    if len(x):
+                        return x
+                pg.time.delay(1)
+        st_screen.fill((0, 0, 0))
+        st_screen.blit(lvl_scrn, (0, 0))
+        [i[0].draw(st_screen) for i in lvl_scrn_buttons]
+        st_screen.blit(lvls[0], (WIDTH * 0.60677083, HEIGHT * 0.1185))
+        st_screen.blit(border, (WIDTH * 0.57291666, HEIGHT * 0.05))
+        screen.blit(st_screen, (0, 0))
+        pg.display.flip()
+        clock.tick(FPS)
 
 
 def choose_level_screen():
