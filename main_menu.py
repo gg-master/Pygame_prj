@@ -28,8 +28,10 @@ fon = pg.transform.scale(pg.image.load('style/data/system_image/main_menu_bckgrn
 st_screen = pg.Surface(screen.get_size())
 bg_screen = pg.Surface(screen.get_size())
 bg_screen.blit(fon, (0, 0))
-lvl_scrn = pg.transform.scale(pg.image.load('style/data/system_image/'
+lvl_scr = pg.transform.scale(pg.image.load('style/data/system_image/'
                                          'ch_lvl_bckgrnd.png'), (WIDTH, HEIGHT))
+lvl_scrn = pg.Surface(screen.get_size())
+lvl_scrn.blit(lvl_scr, (0, 0))
 border = pg.transform.scale(pg.image.load('style/data/system_image/'
                                          'border.png'), (round(WIDTH * 0.390625), round(HEIGHT * 0.6944444)))
 tanks_battle = load_image(GAME_HEADER_PATH)
@@ -42,12 +44,18 @@ exit_wnd_f = False
 settings_wnd_f = False
 rules_wnd_f = False
 is_save = False
+bck_is_drk = False
+
+
+def func():
+    pass
 
 
 def change_exit_f():
     global exit_wnd_f
     exit_wnd_f = not exit_wnd_f
-    return change_pause()
+    change_pause()
+    return [start_screen, (False, )]
     # return wnd_manager()
 
 
@@ -58,7 +66,8 @@ def change_settings_f():
     click_sound.set_volume(sound_v)
     if settings_wnd_f:
         setting_window.update()
-    return change_pause()
+    change_pause()
+    return [start_screen, (False, )]
 
 
 def default_settings():
@@ -68,15 +77,7 @@ def default_settings():
         with open('settings.json', 'w') as f1:
             json.dump(data, f1)
     setting_window.update()
-
-# def wnd_manager(exit=False, settings=False, rules=False):
-#     change_pause()
-#     if exit_wnd_f:
-#         return exit_window.draw(screen)
-#     if settings_wnd_f:
-#         return
-#     if rules_wnd_f:
-#         return
+    return [start_screen, (False, )]
 
 
 def change_pause():
@@ -299,7 +300,8 @@ class SettingsWindow:
         click_sound.set_volume(sound_v)
         with open('settings.json', 'w') as f:
             json.dump(data, f)
-        return self.update()
+        self.update()
+        return [start_screen, (False, )]
 
 
 class ConfirmWindow:
@@ -340,19 +342,20 @@ class Button:
         self.hover_image = pg.transform.scale(pg.image.load('style/data/system_image/'
                                          'button_hovered.png'), (width, height))
         self.width, self.height = self.normal_image.get_rect().size
+        font = pg.font.SysFont("comicsans", self.size)
+        self.text = font.render(self.text, True, (255, 255, 255))
 
     def draw(self, win):
         x1, y1 = pg.mouse.get_pos()
-        font = pg.font.SysFont("comicsans", self.size)
-        text = font.render(self.text, True, (255, 255, 255))
+
         if self.x + self.limit_x <= x1 <= self.x + self.width - self.limit_x and self.y <= y1 <= self.y + self.height:
             win.blit(self.hover_image, (self.x, self.y))
-            win.blit(text, (self.x + self.width / 2 - text.get_width() / 2,
-                            self.y + self.height / 2 - text.get_height() / 1.65))
+            win.blit(self.text, (self.x + self.width / 2 - self.text.get_width() / 2,
+                            self.y + self.height / 2 - self.text.get_height() / 1.65))
         else:
             win.blit(self.normal_image, (self.x, self.y))
-            win.blit(text, (self.x + self.width / 2 - text.get_width() / 2,
-                            self.y + self.height / 2 - text.get_height() / 1.9))
+            win.blit(self.text, (self.x + self.width / 2 - self.text.get_width() / 2,
+                            self.y + self.height / 2 - self.text.get_height() / 1.9))
 
     def click(self, pos, action, *args):
         x1, y1 = pos[0], pos[1]
@@ -360,11 +363,11 @@ class Button:
                 self.y <= y1 <= self.y + self.height) and action:
             click_sound.play()
             if len(args[0]) != 1:
-                action(args[0][1:])
+                return [action, args[0][1:]]
             else:
-                action()
+                return [action]
         else:
-            return
+            return []
 
 
 def choose_level_screen():
@@ -374,15 +377,18 @@ def choose_level_screen():
             if event.type == pg.QUIT:
                 terminate()
             if event.type == pg.MOUSEBUTTONDOWN and event.button == 1:
-                click_sound.play()
-                [btn.click(event.pos, act, arg)
-                 for btn, act, arg in lvl_scrn_buttons]
+                response = [btn.click(event.pos, act, arg)
+                            for btn, act, arg in lvl_scrn_buttons]
+                for x in response:
+                    if len(x):
+                        return x
                 pg.time.delay(1)
-        screen.fill((0, 0, 0))
-        screen.blit(lvl_scrn, (0, 0))
-        [i[0].draw(screen) for i in lvl_scrn_buttons]
-        screen.blit(lvls[0], (WIDTH * 0.60677083, HEIGHT * 0.1185))
-        screen.blit(border, (WIDTH * 0.57291666, HEIGHT * 0.05))
+        st_screen.fill((0, 0, 0))
+        st_screen.blit(lvl_scrn, (0, 0))
+        [i[0].draw(st_screen) for i in lvl_scrn_buttons]
+        st_screen.blit(lvls[0], (WIDTH * 0.60677083, HEIGHT * 0.1185))
+        st_screen.blit(border, (WIDTH * 0.57291666, HEIGHT * 0.05))
+        screen.blit(st_screen, (0, 0))
         pg.display.flip()
         clock.tick(FPS)
 
@@ -394,9 +400,11 @@ def game_mode_screen():
             if event.type == pg.QUIT:
                 terminate()
             if event.type == pg.MOUSEBUTTONDOWN and event.button == 1:
-                click_sound.play()
-                [btn.click(event.pos, act, arg)
+                response = [btn.click(event.pos, act, arg)
                  for btn, act, arg in game_mode_buttons]
+                for x in response:
+                    if len(x):
+                        return x
                 pg.time.delay(1)
         st_screen.fill((0, 0, 0))
         st_screen.blit(bg_screen, (0, 0))
@@ -465,9 +473,9 @@ def first_show():
 
 
 def start_screen(is_first):
+    global bck_is_drk
     first_show() if is_first[0] else None
     run = True
-    bck_is_drk = False
     while run:
         if pause:
             if not bck_is_drk:
@@ -482,10 +490,16 @@ def start_screen(is_first):
                     terminate()
                 if event.type == pg.MOUSEBUTTONDOWN and event.button == 1:
                     if exit_wnd_f:
-                        [btn.click(event.pos, act, arg)
+                        response = [btn.click(event.pos, act, arg)
                          for btn, act, arg in close_win_buttons]
+                        for x in response:
+                            if len(x):
+                                return x
                     if settings_wnd_f:
-                        [btn.click(event.pos, act, arg) for btn, act, arg in settings_wnd_btns]
+                        response = [btn.click(event.pos, act, arg) for btn, act, arg in settings_wnd_btns]
+                        for x in response:
+                            if len(x):
+                                return x
                 if settings_wnd_f:
                     [i.handle_event(event) for i in setting_window.line_edits_arr]
             if settings_wnd_f:
@@ -500,13 +514,17 @@ def start_screen(is_first):
             pg.display.flip()
             clock.tick(FPS)
             continue
-        for event in pg.event.get():
-            if event.type == pg.QUIT:
-                terminate()
-            if event.type == pg.MOUSEBUTTONDOWN and event.button == 1:
-                [btn.click(event.pos, act, arg)
-                 for btn, act, arg in main_menu_buttons]
-                pg.time.delay(1)
+        else:
+            for event in pg.event.get():
+                if event.type == pg.QUIT:
+                    terminate()
+                if event.type == pg.MOUSEBUTTONDOWN and event.button == 1:
+                    response = [btn.click(event.pos, act, arg)
+                     for btn, act, arg in main_menu_buttons]
+                    for x in response:
+                        if len(x):
+                            return x
+                    pg.time.delay(1)
         st_screen.fill((0, 0, 0))
         st_screen.blit(bg_screen, (0, 0))
         st_screen.blit(tanks_battle,
@@ -539,11 +557,9 @@ exit_window = ConfirmWindow('Подтвреждение', 'Вы действит
 setting_window = SettingsWindow()
 
 
-game_mode_buttons = [[Button('Кампания', WIDTH * 0.34, HEIGHT * 0.426, width=int(0.321 * WIDTH), height=int(0.063 * HEIGHT)), choose_level_screen, (False, )],
-                     [Button('Играть', WIDTH * 0.34, HEIGHT * 0.5, width=int(0.321 * WIDTH), height=int(0.063 * HEIGHT)), False, (False, )],
+game_mode_buttons = [[Button('Играть', WIDTH * 0.34, HEIGHT * 0.5, width=int(0.321 * WIDTH), height=int(0.063 * HEIGHT)), choose_level_screen, (False, )],
                      [Button('Игра с другом', WIDTH * 0.34, HEIGHT * 0.574, width=int(0.321 * WIDTH), height=int(0.063 * HEIGHT)), False, (False, )],
-                     [Button('Онлайн', WIDTH * 0.34, HEIGHT * 0.648, width=int(0.321 * WIDTH), height=int(0.063 * HEIGHT)), False, (False, )],
-                     [Button('Назад', WIDTH * 0.34, HEIGHT * 0.722, width=int(0.321 * WIDTH), height=int(0.063 * HEIGHT)), start_screen, (False, False)]]
+                     [Button('Назад', WIDTH * 0.34, HEIGHT * 0.648, width=int(0.321 * WIDTH), height=int(0.063 * HEIGHT)), start_screen, (False, False)]]
 
 
 settings_wnd_btns = [[Button('Сохранить', WIDTH * 0.491666, HEIGHT * 0.682407, width=int(WIDTH * 0.1), height=int(HEIGHT * 0.03), size=round(WIDTH * 0.010416), limit=(20, 0)), setting_window.saving, (False, )],
@@ -605,19 +621,14 @@ lvls = [pg.transform.scale(pg.image.load('style/data/system_image/lvl.jpg'), (ro
         pg.image.load('style/data/system_image/lvl.jpg'),]
 
 
-
 def main():
     running = True
-    type_game, level, select_screen = start_screen((True, ))
-    print(type_game, level)
+    response = start_screen((True, ))
     while running:
-        screen.blit(background, (0, 0))
-        for event in pg.event.get():
-            if event.type == pg.QUIT:
-                running = False
-        screen.blit(select_screen, (0, 0))
-        pg.display.flip()
-        clock.tick(FPS)
+        if len(response) == 2:
+            response = response[0](response[1])
+        else:
+            response = response[0]()
     pg.quit()
 
 
