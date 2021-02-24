@@ -8,6 +8,16 @@ DIR_FOR_TANKS_IMG = 'tanks_texture\\'
 WORLDIMG_DIR = 'world\\'
 
 
+def int_r(num):
+    """
+    Округление чисел в "правильную" сторону
+    :param num:
+    :return:
+    """
+    num = int(num + (0.5 if num > 0 else -0.5))
+    return num
+
+
 class Player(pygame.sprite.Sprite):
     # Определение всех необходимых названий картинок для текстур танка
     images = {
@@ -24,6 +34,7 @@ class Player(pygame.sprite.Sprite):
     def __init__(self, game, coords, tile_size, player):
         super().__init__(game.player_group, game.map_group, game.all_sprites)
         self.game = game
+        self.TILE_SIZE = tile_size
         self.side = 't'
         self.player = player
         self.type_tanks = 't1'
@@ -32,11 +43,11 @@ class Player(pygame.sprite.Sprite):
         self.killed_enemies = {'t1': [0, 0], 't2': [0, 0],
                                't3': [0, 0], 't4': [0, 0]}
         self.count_points = 0
-
-        self.speed = 2
+        self.speed_k = self.TILE_SIZE / 50
+        self.speed = int_r(2 * self.speed_k)  # 2
         self.lives = 2
-        self.bullet_prof = False
 
+        self.bullet_prof = False
         self.bullet = None
         self.bullet_speed = 5
         self.shoot_delay = 200
@@ -49,11 +60,9 @@ class Player(pygame.sprite.Sprite):
         # устанавливае значения для этип параметров в зависимости от типа танка
         self.set_properties()
         # Размер клетки на поле
-        self.TILE_SIZE = tile_size
         self.mask = self.image = None
         # Загружаем маску и картинку танка
         self.load_tanks_image()
-
         # Записываем начальные координаты
         self.coords = coords
         # Создаем прямоугольних из картинки, для обработки передвижения
@@ -103,8 +112,9 @@ class Player(pygame.sprite.Sprite):
         elif name_bonus == 't':
             self.lives += 1
         elif name_bonus == 'h':
-            self.with_shield = True
-            Shield(self)
+            if not self.with_shield:
+                self.with_shield = True
+                Shield(self)
         elif name_bonus == 'p':
             self.type_tanks = 't4'
             self.lives += 2
@@ -117,10 +127,10 @@ class Player(pygame.sprite.Sprite):
         :return: None: только изменение параметров объекта
         """
         if self.type_tanks == 't1':
-            self.speed = 2
+            self.speed = int_r(2 * self.speed_k)  # 2
         elif self.type_tanks == 't2':
-            self.speed = 3
-            self.bullet_speed = 6
+            self.speed = int_r(3 * self.speed_k)  # 3
+            self.bullet_speed = int_r(6 * self.speed_k)
         elif self.type_tanks == 't3':
             self.bullet_speed = 7
 
@@ -334,18 +344,18 @@ class Bullet(pygame.sprite.Sprite):
         self.is_ricochet = False
         self.from_ricochet = None
         self.side = side
-        self.speed = speed
+        self.speed_k = self.game.TILE_SIZE / 50
+        self.speed = int_r(speed * self.speed_k)
         self.speedy, self.speedx = 0, 0
 
         self.rect = self.mask = None
         self.orig_image = load_image(f'{DIR_FOR_TANKS_IMG}'
                                      f'bullet\\b.png')
-        k = (rect_tank.width // 4) // self.orig_image.get_rect().width
-        self.orig_image = pygame.transform.scale(self.orig_image,
-                                                 (self.orig_image.get_rect()
-                                                  .width * k,
-                                                  self.orig_image.get_rect()
-                                                  .height * k))
+        k = (rect_tank.width / 6) / self.orig_image.get_width()
+        self.orig_image = pygame.transform.scale(
+            self.orig_image, (
+                int(self.orig_image.get_width() * k),
+                int(self.orig_image.get_height() * k)))
         self.image = self.orig_image.copy()
         self.rect = self.image.get_rect()
         self.rotate_image(180 if self.side == 'b' else
@@ -538,6 +548,7 @@ class Bot(pygame.sprite.Sprite):
         super().__init__(game.map_group, game.mobs_group, game.all_sprites)
 
         self.game = game
+        self.TILE_SIZE = tile_size
         self.type_tanks = type_bot
         self.number = number_tank
         self.side = 't'
@@ -557,7 +568,8 @@ class Bot(pygame.sprite.Sprite):
 
         self.isFreeze = self.spawn_stopper = self.hidden = False
 
-        self.speed = 2
+        self.speed_k = self.TILE_SIZE / 50
+        self.speed = int_r(2 * self.speed_k)
         self.speedx = self.speedy = 0
 
         self.lives = 1
@@ -577,7 +589,6 @@ class Bot(pygame.sprite.Sprite):
         # задаем некоторым конкретные значения
         self.set_properties()
 
-        self.TILE_SIZE = tile_size
         self.image = self.mask = None
         self.load_tanks_image()
         # Аналогично как и в классе игрока
@@ -650,12 +661,12 @@ class Bot(pygame.sprite.Sprite):
         if self.number in [4, 11, 18]:
             self.is_bonus = True
         if self.type_tanks == 't1':
-            self.speed = 1
+            self.speed = int_r(1 * self.speed_k)
         elif self.type_tanks == 't2':
-            self.speed = 3
+            self.speed = int_r(3 * self.speed_k)
             self.points = 200
         elif self.type_tanks == 't3':
-            self.bullet_speed = 7
+            self.bullet_speed = 6
             self.points = 300
         elif self.type_tanks == 't4':
             self.lives = 4
@@ -1415,7 +1426,7 @@ class Bonus(pygame.sprite.Sprite):
         self.game = game
         self.points = 500
         self.bonus = choice(available_bonuses)
-        # self.bonus = 't'
+        # self.bonus = 'h'
         self.image = load_image(f"{DIR_FOR_TANKS_IMG}"
                                 f"bonus\\{self.images[self.bonus]}")
         k = ((3 * self.game.TILE_SIZE) // 4) // self.image.get_rect().width
@@ -1461,11 +1472,11 @@ class Bonus(pygame.sprite.Sprite):
         player.earn_points(self)
         if self.bonus in ['t', 's', 'h', 'p']:
             player.activate_bonus(self.bonus)
-            self.game.add_music_track('heal'
-                                      if self.bonus == 't'
-                                      else 'star' if self.bonus == 's'
-                                      else 'pistol' if self.bonus == 'p'
-                                      else 'helmet')
+            if self.bonus in ['t', 's', 'p']:
+                self.game.add_music_track('heal'
+                                          if self.bonus == 't'
+                                          else 'star' if self.bonus == 's'
+                                          else 'pistol')
         elif self.bonus in ['c', 'g']:
             self.game.add_music_track('grenade') if self.bonus == 'g' else ''
             self.game.bot_manager.activate_bonus(self.bonus)
@@ -1490,6 +1501,7 @@ class Shield(pygame.sprite.Sprite):
         self.image = pygame.Surface((self.rect.width, self.rect.height),
                                     pygame.SRCALPHA, 32)
         self.offset = 3
+        self.player.game.add_music_track('helm_on')
 
     def load_image(self):
         self.shield_n = 0 if self.shield_n == 1 else 1
@@ -1511,6 +1523,7 @@ class Shield(pygame.sprite.Sprite):
                 else self.shield_timer
             if now - self.shield_timer > self.shield_duration:
                 self.player.with_shield = False
+                self.player.game.add_music_track('helm_off')
                 self.kill()
             else:
                 if now - self.last_update > self.frame_rate:
