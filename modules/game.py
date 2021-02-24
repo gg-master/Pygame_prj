@@ -41,6 +41,14 @@ def convert_coords(x, tile_size):
     return x[0] * tile_size + OFFSET, x[1] * tile_size + OFFSET, x[2]
 
 
+def get_random_map_number():
+    available_numbers = list(
+        map(lambda x: int(x.split('.')[0].split('map')[-1]),
+            filter(lambda x: x.endswith('.tmx'),
+                   os.listdir(MAPDIR))))
+    return choice(available_numbers)
+
+
 class BotManager:
     def __init__(self, game_obj):
         self.game = game_obj
@@ -217,7 +225,7 @@ class Map:
         self.level = number_level
         path = f'{MAPDIR}map{self.level}.tmx'
         if not os.path.isfile(path):
-            self.level = 1
+            self.level = get_random_map_number()
             path = f'{MAPDIR}map{self.level}.tmx'
         self.map = pytmx.load_pygame(os.path.join(os.getcwd(), path))
         # Размер клетки
@@ -425,6 +433,7 @@ class PauseScreen:
     """
     Класс, который отвечает за отрисовку окна паузы
     """
+
     def __init__(self, game, screen):
         self.game = game
         self.pscreen = pygame.Surface((screen.get_rect().w,
@@ -458,6 +467,7 @@ class Button:
     """
     Класс кнопки
     """
+
     def __init__(self, text, x=0, y=0, width=616, height=68, size=40,
                  limit=(0, 0)):
         self.text = text

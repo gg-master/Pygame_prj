@@ -260,7 +260,9 @@ class Client:
             if feedback in ['continue', 'restart']:
                 self.number_level += 1 if feedback == 'continue' else 0
                 self.create_new_game(self.type_game,
-                                     self.number_level, self.screen)
+                                     self.game.level
+                                     if feedback == 'restart'
+                                     else self.number_level, self.screen)
             elif feedback == 'exit':
                 self.is_exit = True
         # Узаем позицию мыши и состояние клавиш клавиатуры
@@ -299,7 +301,7 @@ fullscreen = False
 if __name__ == '__main__':
     clock = pygame.time.Clock()
     running = True
-    client = Client(1, 1, screen)
+    client = Client(1, 21, screen)
     while running:
         screen.fill(pygame.Color('black'))
         if client.is_exit:
