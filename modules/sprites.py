@@ -55,6 +55,7 @@ class Player(pygame.sprite.Sprite):
         self.turning_turret_delay = 750
         self.turning_turret_timer = None
 
+        self.shield = None
         self.hidden = self.with_shield = self.spawn_stopper = False
         # После объявления некоторых параметров для танка игрока
         # устанавливае значения для этип параметров в зависимости от типа танка
@@ -96,7 +97,7 @@ class Player(pygame.sprite.Sprite):
         self.rect.x = self.coords[0]
         self.rect.y = self.coords[1]
         # Создаем щит и анимацию спавна
-        Shield(self)
+        self.shield = Shield(self)
         SpawnAnim(self)
 
     def activate_bonus(self, name_bonus):
@@ -112,9 +113,10 @@ class Player(pygame.sprite.Sprite):
         elif name_bonus == 't':
             self.lives += 1
         elif name_bonus == 'h':
-            if not self.with_shield:
-                self.with_shield = True
-                Shield(self)
+            if self.shield:
+                self.shield.kill()
+            self.with_shield = True
+            self.shield = Shield(self)
         elif name_bonus == 'p':
             self.type_tanks = 't4'
             self.lives += 2
@@ -1426,7 +1428,7 @@ class Bonus(pygame.sprite.Sprite):
         self.game = game
         self.points = 500
         self.bonus = choice(available_bonuses)
-        # self.bonus = 'h'
+        self.bonus = 'h'
         self.image = load_image(f"{DIR_FOR_TANKS_IMG}"
                                 f"bonus\\{self.images[self.bonus]}")
         k = ((3 * self.game.TILE_SIZE) // 4) // self.image.get_rect().width
@@ -1529,6 +1531,9 @@ class Shield(pygame.sprite.Sprite):
                 if now - self.last_update > self.frame_rate:
                     self.last_update = now
                     self.load_image()
+
+    def boost(self):
+        self.shield_timer = pygame.time.get_ticks()
 
 
 class SpawnAnim(pygame.sprite.Sprite):

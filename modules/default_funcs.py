@@ -6,10 +6,13 @@ import pygame_gui
 from constants import *
 
 
+SETTINGS_PATH = 'settings/settings.json'
+
+
 def load_settings():
     if os.getcwd().split('\\')[-1] == 'modules':
         os.chdir('..')
-    with open('settings.json') as settings_file:
+    with open(SETTINGS_PATH) as settings_file:
         return json.load(settings_file)
 
 
