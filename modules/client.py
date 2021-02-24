@@ -1,7 +1,7 @@
 import os
 import pygame
-from game import Game
-from default_funcs import load_settings, load_image
+from modules.game import Game
+from modules.default_funcs import load_settings, load_image
 
 WIDTH, HEIGHT = 950, 750
 FPS = 60

@@ -3,7 +3,7 @@ import pygame
 import os
 from math import ceil
 from modules.sprites import Player, Bot, Eagle, Wall, EmptyBot
-from default_funcs import load_image, load_settings
+from modules.default_funcs import load_image, load_settings
 from random import choice
 
 """

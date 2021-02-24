@@ -1,6 +1,6 @@
 import pygame
 from random import random, choice, randrange
-from default_funcs import load_image
+from modules.default_funcs import load_image
 
 # Путь от корня проекта до текстур танков
 DIR_FOR_TANKS_IMG = 'tanks_texture\\'
