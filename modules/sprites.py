@@ -1428,7 +1428,7 @@ class Bonus(pygame.sprite.Sprite):
         self.game = game
         self.points = 500
         self.bonus = choice(available_bonuses)
-        self.bonus = 'h'
+        # self.bonus = 'h'
         self.image = load_image(f"{DIR_FOR_TANKS_IMG}"
                                 f"bonus\\{self.images[self.bonus]}")
         k = ((3 * self.game.TILE_SIZE) // 4) // self.image.get_rect().width
