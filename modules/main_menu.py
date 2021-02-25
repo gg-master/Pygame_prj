@@ -13,7 +13,7 @@ background.fill((0, 0, 0, 0))
 pg.display.set_caption('Tanks Battle')
 clock = pg.time.Clock()
 maps = ['']
-pg.mixer.music.load('../data/music/music/main_theme.mp3')
+pg.mixer.music.load('../data/music/music/main_theme.wav')
 click_sound = pg.mixer.Sound('../data/sounds/click.wav')
 with open('../settings/settings.json') as f:
     data = json.load(f)
@@ -97,7 +97,15 @@ def change_lvl_image(index):
     lvl_image = pg.transform.scale(
         pg.image.load(f'../data/system_image/lvl{index}.jpg'),
         (round(WIDTH * 0.32447916), round(HEIGHT * 0.56296)))
-    return [choose_level_screen, (map_index[0],)]
+    return [choose_level_screen, map_index]
+
+
+def start_game():
+    return [func, map_index]
+
+
+def func(game_type):
+    print('Congrats!', game_type)
 
 
 class InputBox:
@@ -507,7 +515,7 @@ class Button:
 
 
 def choose_level_screen(typ):
-    global lvl_image
+    global lvl_image, map_index
     if not lvl_image:
         if (type(typ) == tuple and typ[0] == 1) or typ == 1:
             lvl_image = pg.transform.scale(pg.image.load('../data'
@@ -515,12 +523,14 @@ def choose_level_screen(typ):
                                                          '/lvl1_1.jpg'),
                                            (round(WIDTH * 0.32447916),
                                             round(HEIGHT * 0.56296)))
+            map_index = (1, 1)
         else:
             lvl_image = pg.transform.scale(pg.image.load('../data'
                                                          '/system_image'
                                                          '/lvl2_1.jpg'),
                                            (round(WIDTH * 0.32447916),
                                             round(HEIGHT * 0.56296)))
+            map_index = (2, 1)
     print('typ', typ)
     run = True
     while run:
@@ -546,7 +556,10 @@ def choose_level_screen(typ):
             [i[0].draw(st_screen) for i in lvl_scrn_buttons_2]
         st_screen.blit(lvl_image, (WIDTH * 0.60677083, HEIGHT * 0.1185))
         st_screen.blit(border, (WIDTH * 0.57291666, HEIGHT * 0.05))
-        pg.draw.rect(st_screen, (57, 59, 61), (round(WIDTH * 0.57291666), round(HEIGHT * 0.05), round(WIDTH * 0.390625), round(HEIGHT * 0.6944444)), 6)
+        pg.draw.rect(st_screen, (57, 59, 61), (round(WIDTH * 0.57291666),
+                                               round(HEIGHT * 0.05),
+                                               round(WIDTH * 0.390625),
+                                               round(HEIGHT * 0.6944444)), 6)
         screen.blit(st_screen, (0, 0))
         pg.display.flip()
         clock.tick(FPS)
@@ -798,7 +811,7 @@ lvl_scrn_buttons_1 = [[Button('Уровень 1', WIDTH * 0.125, HEIGHT * 0.06,
                        (False,)],
                       [Button('Играть', WIDTH * 0.611979166, HEIGHT * 0.85,
                               width=int(0.321 * WIDTH),
-                              height=int(0.063 * HEIGHT)), False, (False,)]]
+                              height=int(0.063 * HEIGHT)), start_game, (False,)]]
 
 lvl_scrn_buttons_2 = [[Button('Уровень 1', WIDTH * 0.125, HEIGHT * 0.06,
                               width=int(WIDTH * 0.25),
@@ -846,13 +859,14 @@ lvl_scrn_buttons_2 = [[Button('Уровень 1', WIDTH * 0.125, HEIGHT * 0.06,
                        (False,)],
                       [Button('Играть', WIDTH * 0.611979166, HEIGHT * 0.85,
                               width=int(0.321 * WIDTH),
-                              height=int(0.063 * HEIGHT)), False, (False,)]]
+                              height=int(0.063 * HEIGHT)), start_game, (False,)]]
 
 
 def main():
     running = True
     response = start_screen(2)
     while running:
+        print(response)
         if len(response) == 2:
             response = response[0](response[1])
         else:
