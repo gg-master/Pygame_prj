@@ -11,7 +11,7 @@ pygame.init()
 # Инициализация и установка количества звуковых каналов
 pygame.mixer.init()
 pygame.mixer.set_num_channels(35)
-screen = pygame.display.set_mode((WIDTH, HEIGHT), pygame.RESIZABLE)
+# screen = pygame.display.set_mode((WIDTH, HEIGHT), pygame.RESIZABLE)
 monitor_size = [pygame.display.Info().current_w,
                 pygame.display.Info().current_h]
 background = pygame.Surface((WIDTH, HEIGHT))

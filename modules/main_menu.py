@@ -1,4 +1,5 @@
 import pygame as pg
+from client import Client
 import sys
 import time
 import json
@@ -36,8 +37,8 @@ lvl_scrn.blit(lvl_scr, (0, 0))
 lvl_image = None
 border = pg.transform.scale(pg.image.load('../data/system_image/'
                                           'border.png'), (
-                            round(WIDTH * 0.390625),
-                            round(HEIGHT * 0.6944444)))
+                                round(WIDTH * 0.390625),
+                                round(HEIGHT * 0.6944444)))
 tanks_battle = pg.image.load('../data/system_image/TanksBattle.png')
 tanks_battle_rect = tanks_battle.get_rect()
 bck_dark = pg.Surface((WIDTH, HEIGHT))
@@ -106,6 +107,23 @@ def start_game():
 
 def func(game_type):
     print('Congrats!', game_type)
+    running = True
+    pg.mixer.music.stop()
+    client = Client(map_index[0], map_index[1], screen)
+    while running:
+        screen.fill(pg.Color('black'))
+        if client.is_exit:
+            # print('Выход в меню')
+            return [play_music]
+        for event in pg.event.get():
+            if event.type == pg.QUIT:
+                running = False
+            client.update(event)
+        client.update()
+        client.render()
+        pg.display.flip()
+        clock.tick(FPS)
+    pg.quit()
 
 
 class InputBox:
@@ -132,9 +150,9 @@ class InputBox:
                 self.active = not self.active
             else:
                 self.active = False
-            self.color = self.color_active if self.active\
+            self.color = self.color_active if self.active \
                 else self.color_inactive
-            self.border = self.active_border if self.active\
+            self.border = self.active_border if self.active \
                 else self.inactive_border
         if self.active and not self.usual:
             self.text = ''
@@ -150,7 +168,7 @@ class InputBox:
                 else:
                     self.text = pg.key.name(event.key)
                     self.text = f'keypad ' \
-                                f'{self.text.split("[")[1].split("]")[0]}'\
+                        f'{self.text.split("[")[1].split("]")[0]}' \
                         if '[' in self.text or ']' in self.text else self.text
                     self.btn = event.key
                     self.active = False
@@ -162,8 +180,8 @@ class InputBox:
             screen.blit(self.txt_surface, (self.rect.x + 5, self.rect.y + 5))
         else:
             screen.blit(self.txt_surface, (
-            self.rect.x + (self.rect.w - self.txt_surface.get_width()) / 2,
-            self.rect.y + 5))
+                self.rect.x + (self.rect.w - self.txt_surface.get_width()) / 2,
+                self.rect.y + 5))
         pg.draw.rect(screen, self.color, self.rect, self.border)
 
 
@@ -171,7 +189,7 @@ class SliderBar:
     def __init__(self, x, y, width, height, orientation, value=100, music=0):
         self.x, self.y = x, y
         self.width, self.height = (width, height) if orientation else (
-        height, width)
+            height, width)
         self.post = pg.Surface(
             (self.width / 3, self.height + self.height / 25))
         self.slider = pg.Surface((self.width, self.height / 25))
@@ -179,8 +197,8 @@ class SliderBar:
         self.slider.fill((84, 87, 87))
         self.bar = pg.transform.scale(pg.image.load('../data/system_image/'
                                                     'alpha_0.png'), (
-                                      self.width,
-                                      int(self.height + self.height / 25)))
+                                          self.width,
+                                          int(self.height + self.height / 25)))
         self.bar.blit(self.post, (self.width / 3, 0))
         self.pxperv = self.height / 100
         self.value = value
@@ -194,7 +212,7 @@ class SliderBar:
 
     def click(self, pos):
         x, y = pos
-        if self.x - 10 <= x <= self.x + self.width + 10 and\
+        if self.x - 10 <= x <= self.x + self.width + 10 and \
                 self.y <= y <= self.y + self.height:
             self.value = 100 - (y - self.y) / self.pxperv
             if not self.music:
@@ -243,12 +261,12 @@ class SettingsWindow:
                                                     (0, 0, 0))
         self.background.blit(self.top, (0, 0))
         self.background.blit(music_text, (
-        WIDTH * 0.03125 - music_text.get_width() / 2, HEIGHT * 0.32407407))
+            WIDTH * 0.03125 - music_text.get_width() / 2, HEIGHT * 0.32407407))
         self.background.blit(eff_text, (
-        WIDTH * 0.083333 - eff_text.get_width() / 2, HEIGHT * 0.32407407))
+            WIDTH * 0.083333 - eff_text.get_width() / 2, HEIGHT * 0.32407407))
         self.background.blit(control_text, (
-        WIDTH * 0.20833 - control_text.get_width() / 2,
-        HEIGHT * 0.125 - int(control_text.get_height() / 2)))
+            WIDTH * 0.20833 - control_text.get_width() / 2,
+            HEIGHT * 0.125 - int(control_text.get_height() / 2)))
         self.background.blit(player_nick_text, (WIDTH * 0.114583,
                                                 HEIGHT * 0.0805 - int(
                                                     player_nick_text.
@@ -274,7 +292,7 @@ class SettingsWindow:
                                               player_nick_text.
                                               get_height() / 2)))
         self.background.blit(header_text, (
-        (self.width - header_text.get_width()) / 2, self.height * 0.03))
+            (self.width - header_text.get_width()) / 2, self.height * 0.03))
         pg.draw.line(self.background, (57, 59, 61), (0, self.height * 0.11805),
                      (self.width, self.height * 0.11805), 3)
         pg.draw.rect(self.background, (47, 48, 48), (round(self.width *
@@ -301,9 +319,9 @@ class SettingsWindow:
         self.window_scr.blit(self.background, (0, 0))
         if self.none_button:
             self.window_scr.blit(self.none_button_text1, (
-            self.width * 0.0234375, self.height * 0.90277777))
+                self.width * 0.0234375, self.height * 0.90277777))
             self.window_scr.blit(self.none_button_text2, (
-            self.width * 0.0234375, self.height * 0.949074))
+                self.width * 0.0234375, self.height * 0.949074))
         self.window_scr.blit(self.music_bar.draw(),
                              (self.width * 0.078125, self.height * 0.162037))
         self.window_scr.blit(self.effects_bar.draw(),
@@ -424,7 +442,7 @@ class SettingsWindow:
             9].text
         data['player_settings']['shoot_btn_1'] = self.line_edits_arr[10].text
         data['player_settings']['shoot_btn_2'] = self.line_edits_arr[11].text
-        music_v, sound_v = self.music_bar.value / 100, self.effects_bar.value\
+        music_v, sound_v = self.music_bar.value / 100, self.effects_bar.value \
                            / 100
         pg.mixer.music.set_volume(music_v)
         click_sound.set_volume(sound_v)
@@ -453,9 +471,9 @@ class ConfirmWindow:
         self.window_scr.blit(self.background, (0, 0))
         self.window_scr.blit(self.top, (0, 0))
         self.window_scr.blit(header_text, (
-        (self.width - header_text.get_width()) / 2, self.height * 0.03))
+            (self.width - header_text.get_width()) / 2, self.height * 0.03))
         self.window_scr.blit(confirm_text, (
-        (self.width - confirm_text.get_width()) / 2, self.height / 4.5))
+            (self.width - confirm_text.get_width()) / 2, self.height / 4.5))
         pg.draw.line(self.window_scr, (57, 59, 61), (0, self.height * 0.16),
                      (self.width, self.height * 0.16), 3)
         pg.draw.rect(self.window_scr, (57, 59, 61),
@@ -486,7 +504,7 @@ class Button:
     def draw(self, win):
         x1, y1 = pg.mouse.get_pos()
 
-        if self.x + self.limit_x <= x1 <= self.x + self.width - self.limit_x\
+        if self.x + self.limit_x <= x1 <= self.x + self.width - self.limit_x \
                 and self.y <= y1 <= self.y + self.height:
             win.blit(self.hover_image, (self.x, self.y))
             win.blit(self.text,
@@ -503,7 +521,7 @@ class Button:
         x1, y1 = pos[0], pos[1]
         if (
                 self.x + self.limit_x <= x1 <= self.x + self.width -
-                self.limit_x and self.y <= y1 <= self.y + self.height) and\
+                self.limit_x and self.y <= y1 <= self.y + self.height) and \
                 action:
             click_sound.play()
             if args[0][0]:
@@ -642,6 +660,11 @@ def first_show():
     alpha_change_screen(background, bg_screen, alpha_to=255 // 3)
     st_screen.blit(bg_screen, (0, 0))
     down_drop_text(screen, tanks_battle, tanks_battle_rect)
+
+
+def play_music():
+    pg.mixer.music.play(loops=-1)
+    return [start_screen, False]
 
 
 def start_screen(is_first):
@@ -811,7 +834,8 @@ lvl_scrn_buttons_1 = [[Button('Уровень 1', WIDTH * 0.125, HEIGHT * 0.06,
                        (False,)],
                       [Button('Играть', WIDTH * 0.611979166, HEIGHT * 0.85,
                               width=int(0.321 * WIDTH),
-                              height=int(0.063 * HEIGHT)), start_game, (False,)]]
+                              height=int(0.063 * HEIGHT)), start_game,
+                       (False,)]]
 
 lvl_scrn_buttons_2 = [[Button('Уровень 1', WIDTH * 0.125, HEIGHT * 0.06,
                               width=int(WIDTH * 0.25),
@@ -859,7 +883,8 @@ lvl_scrn_buttons_2 = [[Button('Уровень 1', WIDTH * 0.125, HEIGHT * 0.06,
                        (False,)],
                       [Button('Играть', WIDTH * 0.611979166, HEIGHT * 0.85,
                               width=int(0.321 * WIDTH),
-                              height=int(0.063 * HEIGHT)), start_game, (False,)]]
+                              height=int(0.063 * HEIGHT)), start_game,
+                       (False,)]]
 
 
 def main():
