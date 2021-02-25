@@ -13,7 +13,7 @@ background.fill((0, 0, 0, 0))
 pg.display.set_caption('Tanks Battle')
 clock = pg.time.Clock()
 maps = ['']
-pg.mixer.music.load('../data/music/main_theme.wav')
+pg.mixer.music.load('../data/music/music/main_theme.wav')
 click_sound = pg.mixer.Sound('../data/sounds/click.wav')
 with open('../settings/settings.json') as f:
     data = json.load(f)
