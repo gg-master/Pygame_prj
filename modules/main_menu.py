@@ -1,8 +1,12 @@
+import os
+
 import pygame as pg
 from client import Client
 import sys
 import time
 import json
+
+os.chdir('..')
 
 FPS = 240
 pg.init()
@@ -14,32 +18,32 @@ background.fill((0, 0, 0, 0))
 pg.display.set_caption('Tanks Battle')
 clock = pg.time.Clock()
 maps = ['']
-pg.mixer.music.load('../data/music/music/main_theme.wav')
-click_sound = pg.mixer.Sound('../data/sounds/click.wav')
-with open('../settings/settings.json') as f:
+pg.mixer.music.load('data/music/music/main_theme.wav')
+click_sound = pg.mixer.Sound('data/sounds/click.wav')
+with open('settings/settings.json') as f:
     data = json.load(f)
     music_v = data['player_settings']['music'] / 100
     sound_v = data['player_settings']['effects'] / 100
 pg.mixer.music.set_volume(music_v)
 click_sound.set_volume(sound_v)
 SYSTEM_IMAGES = 'data\\system_image\\'
-fon = pg.transform.scale(pg.image.load('../data/system_image'
+fon = pg.transform.scale(pg.image.load('data/system_image'
                                        '/main_menu_bckgrnd.png'), (WIDTH,
                                                                    HEIGHT))
 st_screen = pg.Surface(screen.get_size())
 bg_screen = pg.Surface(screen.get_size())
 bg_screen.blit(fon, (0, 0))
-lvl_scr = pg.transform.scale(pg.image.load('../data/system_image'
+lvl_scr = pg.transform.scale(pg.image.load('data/system_image'
                                            '/main_menu_bckgrnd.png'),
                              (WIDTH, HEIGHT))
 lvl_scrn = pg.Surface(screen.get_size())
 lvl_scrn.blit(lvl_scr, (0, 0))
 lvl_image = None
-border = pg.transform.scale(pg.image.load('../data/system_image/'
+border = pg.transform.scale(pg.image.load('data/system_image/'
                                           'border.png'), (
                                 round(WIDTH * 0.390625),
                                 round(HEIGHT * 0.6944444)))
-tanks_battle = pg.image.load('../data/system_image/TanksBattle.png')
+tanks_battle = pg.image.load('data/system_image/TanksBattle.png')
 tanks_battle_rect = tanks_battle.get_rect()
 bck_dark = pg.Surface((WIDTH, HEIGHT))
 bck_dark.fill((0, 0, 0))
@@ -78,9 +82,9 @@ def change_settings_f():
 
 def default_settings():
     global setting_window
-    with open('../settings/default_settings.json') as f:
+    with open('settings/default_settings.json') as f:
         data = json.load(f)
-        with open('../settings/settings.json', 'w') as f1:
+        with open('settings/settings.json', 'w') as f1:
             json.dump(data, f1)
     setting_window.update()
     return [start_screen, (False,)]
@@ -96,7 +100,7 @@ def change_lvl_image(index):
     map_index = list(map(int, index.split('_')))
     print(index)
     lvl_image = pg.transform.scale(
-        pg.image.load(f'../data/system_image/lvl{index}.jpg'),
+        pg.image.load(f'data/system_image/lvl{index}.jpg'),
         (round(WIDTH * 0.32447916), round(HEIGHT * 0.56296)))
     return [choose_level_screen, map_index]
 
@@ -106,7 +110,7 @@ def start_game():
 
 
 def func(game_type):
-    print('Congrats!', game_type)
+    # print('Congrats!', game_type)
     running = True
     pg.mixer.music.stop()
     client = Client(map_index[0], map_index[1], screen)
@@ -195,7 +199,7 @@ class SliderBar:
         self.slider = pg.Surface((self.width, self.height / 25))
         self.post.fill((47, 48, 48))
         self.slider.fill((84, 87, 87))
-        self.bar = pg.transform.scale(pg.image.load('../data/system_image/'
+        self.bar = pg.transform.scale(pg.image.load('data/system_image/'
                                                     'alpha_0.png'), (
                                           self.width,
                                           int(self.height + self.height / 25)))
@@ -225,7 +229,7 @@ class SettingsWindow:
     def __init__(self):
         self.width, self.height = WIDTH // 3, round(HEIGHT * 0.4)
         self.background = pg.transform.scale(
-            pg.image.load('../data/system_image/'
+            pg.image.load('data/system_image/'
                           'settings_wnd_bckgrnd.jpg'),
             (self.width, self.height))
         self.top = pg.Surface((self.width, self.height / 8))
@@ -331,7 +335,7 @@ class SettingsWindow:
 
     def update(self):
         self.none_button = False
-        with open('../settings/settings.json') as file:
+        with open('settings/settings.json') as file:
             data = json.load(file)
             self.first_player_nick = data["player_settings"][
                 "first_player_nick"]
@@ -416,7 +420,7 @@ class SettingsWindow:
         if any([not x.text for x in self.line_edits_arr]):
             self.none_button = True
             return
-        with open('../settings/settings.json') as f:
+        with open('settings/settings.json') as f:
             data = json.load(f)
         data['player_settings']['music'] = self.music_bar.value
         data['player_settings']['effects'] = self.effects_bar.value
@@ -446,7 +450,7 @@ class SettingsWindow:
                            / 100
         pg.mixer.music.set_volume(music_v)
         click_sound.set_volume(sound_v)
-        with open('../settings/settings.json', 'w') as f:
+        with open('settings/settings.json', 'w') as f:
             json.dump(data, f)
         self.update()
         return [start_screen, (False,)]
@@ -492,10 +496,10 @@ class Button:
         self.limit_y = limit[1]
         self.size = size
         self.normal_image = pg.transform.scale(
-            pg.image.load('../data/system_image/'
+            pg.image.load('data/system_image/'
                           'button_normal.png'), (width, height))
         self.hover_image = pg.transform.scale(
-            pg.image.load('../data/system_image/'
+            pg.image.load('data/system_image/'
                           'button_hovered.png'), (width, height))
         self.width, self.height = self.normal_image.get_rect().size
         font = pg.font.SysFont("comicsans", self.size)
@@ -536,14 +540,14 @@ def choose_level_screen(typ):
     global lvl_image, map_index
     if not lvl_image:
         if (type(typ) == tuple and typ[0] == 1) or typ == 1:
-            lvl_image = pg.transform.scale(pg.image.load('../data'
+            lvl_image = pg.transform.scale(pg.image.load('data'
                                                          '/system_image'
                                                          '/lvl1_1.jpg'),
                                            (round(WIDTH * 0.32447916),
                                             round(HEIGHT * 0.56296)))
             map_index = (1, 1)
         else:
-            lvl_image = pg.transform.scale(pg.image.load('../data'
+            lvl_image = pg.transform.scale(pg.image.load('data'
                                                          '/system_image'
                                                          '/lvl2_1.jpg'),
                                            (round(WIDTH * 0.32447916),
