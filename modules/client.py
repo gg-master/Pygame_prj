@@ -4,17 +4,10 @@ from modules.game import Game
 from modules.default_funcs import load_settings, load_image
 from time import sleep
 
-WIDTH, HEIGHT = 950, 750
-FPS = 60
-
 pygame.init()
 # Инициализация и установка количества звуковых каналов
 pygame.mixer.init()
 pygame.mixer.set_num_channels(35)
-# screen = pygame.display.set_mode((WIDTH, HEIGHT), pygame.RESIZABLE)
-monitor_size = [pygame.display.Info().current_w,
-                pygame.display.Info().current_h]
-background = pygame.Surface((WIDTH, HEIGHT))
 
 SOUND_DIR = 'data\\music\\'
 
@@ -223,6 +216,7 @@ class Client:
     Класс клиента, который непосредственно на устройстве пользователя
     запускается и обрабатывает класс игры
     """
+
     def __init__(self, type_game, number_level, screen_surf):
         self.settings = load_settings()
         self.pl_settings = self.settings['player_settings']
@@ -296,12 +290,11 @@ class Client:
         return arr_state
 
 
-fullscreen = False
-
-if __name__ == '__main__':
+def main() -> None:
+    global screen, fullscreen
     clock = pygame.time.Clock()
     running = True
-    client = Client(1, 21, screen)
+    client = Client(1, 4, screen)
     while running:
         screen.fill(pygame.Color('black'))
         if client.is_exit:
@@ -330,3 +323,14 @@ if __name__ == '__main__':
         pygame.display.flip()
         clock.tick(FPS)
     pygame.quit()
+
+
+if __name__ == '__main__':
+    WIDTH, HEIGHT = 950, 750
+    FPS = 60
+    screen = pygame.display.set_mode((WIDTH, HEIGHT), pygame.RESIZABLE)
+    monitor_size = [pygame.display.Info().current_w,
+                    pygame.display.Info().current_h]
+    background = pygame.Surface((WIDTH, HEIGHT))
+    fullscreen = False
+    main()

@@ -60,6 +60,7 @@ class Player(pygame.sprite.Sprite):
         # После объявления некоторых параметров для танка игрока
         # устанавливае значения для этип параметров в зависимости от типа танка
         self.set_properties()
+
         # Размер клетки на поле
         self.mask = self.image = None
         # Загружаем маску и картинку танка
@@ -346,7 +347,7 @@ class Bullet(pygame.sprite.Sprite):
         self.is_ricochet = False
         self.from_ricochet = None
         self.side = side
-        self.speed_k = self.game.TILE_SIZE / 50
+        self.speed_k = max(self.game.TILE_SIZE / 50, 0.6)
         self.speed = int_r(speed * self.speed_k)
         self.speedy, self.speedx = 0, 0
 
@@ -570,7 +571,7 @@ class Bot(pygame.sprite.Sprite):
 
         self.isFreeze = self.spawn_stopper = self.hidden = False
 
-        self.speed_k = self.TILE_SIZE / 50
+        self.speed_k = max(self.TILE_SIZE / 50, 0.6)
         self.speed = int_r(2 * self.speed_k)
         self.speedx = self.speedy = 0
 
@@ -1431,10 +1432,10 @@ class Bonus(pygame.sprite.Sprite):
         # self.bonus = 'h'
         self.image = load_image(f"{DIR_FOR_TANKS_IMG}"
                                 f"bonus\\{self.images[self.bonus]}")
-        k = ((3 * self.game.TILE_SIZE) // 4) // self.image.get_rect().width
-        self.image = pygame.transform.scale(self.image,
-                                            (self.image.get_rect().width * k,
-                                             self.image.get_rect().height * k))
+        k = ((3 * self.game.TILE_SIZE) / 5) / self.image.get_rect().width
+        self.image = pygame.transform.scale(
+            self.image, (int(self.image.get_rect().width * k),
+                         int(self.image.get_rect().height * k)))
         self.mask = pygame.mask.from_surface(self.image)
         self.rect = self.image.get_rect()
         self.hide_image = pygame.Surface((self.rect.width, self.rect.height),

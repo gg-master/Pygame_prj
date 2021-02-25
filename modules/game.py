@@ -30,10 +30,21 @@ TILE_FOR_MOBS = 17
 
 def set_constans_from_settings(screen_surf):
     global MAP_SIZE, OFFSET
-    # TODO разобраться с масштабируемостью карты
-    settings = load_settings()['game_settings']
-    MAP_SIZE = settings['MAP_SIZE']
-    OFFSET = settings['OFFSET']
+    OFFSET = 25
+
+    sc_w, sc_h = screen_surf.get_size()
+    sc_w -= 2 * OFFSET
+    sc_h -= 2 * OFFSET
+    if sc_h <= sc_w:
+        menue_w = (sc_h / 13) * 3
+        size = sc_h + menue_w
+        k = sc_w / size
+        MAP_SIZE = int(sc_h * k) if k < 1 else sc_h
+    if sc_h > sc_w:
+        menue_w = (sc_w / 13) * 3
+        size = sc_w + menue_w
+        k = sc_w / size
+        MAP_SIZE = int(sc_w * k) if k < 1 else sc_w
 
 
 def convert_coords(x, tile_size):
@@ -394,9 +405,7 @@ class Menu(pygame.sprite.Sprite):
         self.image.blit(self.p, (x, y, p_rc.width, p_rc.height))
         # Отрисовка жизни у первого игрока
         x, y = p_rc.width + 8, y - 3
-        pl_lv = p1_lives.get_rect()
-        self.image.blit(p1_lives, (x, y,
-                                   pl_lv.width, pl_lv.height))
+        self.image.blit(p1_lives, (x, y))
         # Если игра на двоих
         if self.is_two_pl:
             x, y = 0, y + pl_lv.height + 10
@@ -418,8 +427,7 @@ class Menu(pygame.sprite.Sprite):
         self.image.blit(self.flag, (x, y, fl_rc.width, fl_rc.height))
         # Отрисовка номера уровня
         x, y = x + fl_rc.width // 2, y + fl_rc.height // 1.5
-        lev_rect = level_text.get_rect()
-        self.image.blit(level_text, (x, y, lev_rect.width, lev_rect.height))
+        self.image.blit(level_text, (x, y))
 
     def update(self, *args):
         # Обновление окна меню
@@ -638,9 +646,9 @@ class GameOverScreen:
 
         sc_rect = screen.get_rect()
         w, h = sc_rect.w, sc_rect.h
-        self.exit_btn.set_coords(2 * self.TS,
+        self.exit_btn.set_coords(w // 3 - self.exit_btn.width // 2,
                                  h - self.TS - self.exit_btn.height)
-        self.action_btn.set_coords(w - 2 * self.TS - self.exit_btn.width,
+        self.action_btn.set_coords(w * 2 // 3 - self.exit_btn.width // 2,
                                    h - self.TS - self.exit_btn.height)
 
         self.action_btn.draw(screen, mouse_pos)
@@ -648,17 +656,10 @@ class GameOverScreen:
 
         self.draw_log(screen)
 
-    def load_tanks_img(self):
-        """Загрузка изображения танков"""
-        arr = []
-        for i in ['t1', 't2', 't3', 't4']:
-            img = load_image(self.images[i])
-            arr.append(pygame.transform.scale(img, (self.TS, self.TS)))
-        return arr.copy()
-
     def draw_log(self, screen):
         """Отрисовка статистика"""
         x, y = screen.get_width() // 4, 3 * self.TS + 30
+        y_orig = (self.TS * 5 + (25 + self.TS) * 4) + self.TS // 2
         font = pygame.font.Font(None, self.k2 + 15)
         for k in self.log.keys():
             data = self.log[k]
@@ -679,8 +680,15 @@ class GameOverScreen:
             f'TOTAL - {sum([i[0] for i in self.log.values()])}',
             False, pygame.Color('white'))
         screen.blit(result, (screen.get_width() // 2 - result.get_width() // 2,
-                             screen.get_height() - 3 * self.TS
-                             - result.get_height() // 2))
+                             y_orig))
+
+    def load_tanks_img(self):
+        """Загрузка изображения танков"""
+        arr = []
+        for i in ['t1', 't2', 't3', 't4']:
+            img = load_image(self.images[i])
+            arr.append(pygame.transform.scale(img, (self.TS, self.TS)))
+        return arr.copy()
 
 
 class Game:
