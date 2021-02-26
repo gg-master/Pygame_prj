@@ -85,7 +85,7 @@ class BotManager:
         # Определяем время респавна ботов
         # (динамическое и зависит от уровня и количества игроков)
         self.respawn_time = (190 - self.game.level * 4 - (
-                self.player_count - 1) * 60) * 15
+                self.player_count - 1) * 60) * 12
         self.start_time = -self.respawn_time
         """В игре существует 3 временных периода когда:
         1: боты просто катаются по карте и ничего не преследуют
