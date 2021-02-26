@@ -131,9 +131,10 @@ class Player(pygame.sprite.Sprite):
         """
         if self.type_tanks == 't1':
             self.speed = int_r(2 * self.speed_k)  # 2
+            self.bullet_speed = 5
         elif self.type_tanks == 't2':
             self.speed = int_r(3 * self.speed_k)  # 3
-            self.bullet_speed = int_r(6 * self.speed_k)
+            self.bullet_speed = 6
         elif self.type_tanks == 't3':
             self.bullet_speed = 7
 
@@ -372,10 +373,12 @@ class Bullet(pygame.sprite.Sprite):
         if self.game.map.check_collide(self.rect):
             self.game.add_music_track(choice(['hit2', 'hit7']))
             self.kill()
+            return
         c = pygame.sprite.spritecollide(self, self.game.all_sprites, False,
-                                        pygame.sprite.collide_mask)
+                                        pygame.sprite.collide_rect)
         if self in c:
             del c[c.index(self)]
+        # print(c) if isinstance(self.who_shoot, Player) else ''
         c = c[0] if c else None
         if c is not None:
             # Пуля врезалась в стену
@@ -385,9 +388,11 @@ class Bullet(pygame.sprite.Sprite):
                     if c.isBroken:
                         self.game.add_music_track(choice(['hit2', 'hit5']))
                         c.change_yourself(coord_collide)
+
                     else:
                         self.game.add_music_track('hit3')
                     self.kill()
+                    return
             # Если пуля врага врезелась в танк игрока
             if c in self.game.player_group:
                 if self.who_shoot != c:
@@ -397,12 +402,14 @@ class Bullet(pygame.sprite.Sprite):
                     self.game.add_music_track(choice(['hit4', 'hit3']))
                     c.kill()
                     self.kill()
+                    return
             # Если пуля врезалась в другую пулю, выпущенную из вражеского танка
             if c in self.game.bullets and c is not self:
                 if self.who_shoot != c.who_shoot:
                     self.game.add_music_track(choice(['hit1', 'hit2']))
                     self.kill()
                     c.kill()
+                    return
             # Пуля врезалась в бота и при этом выстрел был от игрока
             if c in self.game.mobs_group and\
                     isinstance(self.who_shoot, Player):
@@ -415,11 +422,13 @@ class Bullet(pygame.sprite.Sprite):
                 # Если бот уничтожен, то зачисляем очки
                 if not c.alive():
                     self.who_shoot.earn_points(c)
+                return
             # Пуля врезалась в орла
             if c == self.game.eagle:
                 self.game.add_music_track('hit3')
                 c.eagle_break()
                 self.kill()
+                return
 
     def handling_recochet(self, c):
         rez = self.can_ricochet(c)
@@ -1390,14 +1399,14 @@ class Wall(pygame.sprite.Sprite):
                 elif half_s2 <= y <= max_s:
                     self.reload_mask(21)
         elif self.id == 22:
-            if 50 >= x >= 25 >= y >= 0:
+            if max_s >= x >= max_s // 2 >= y >= 0:
                 self.reload_mask(18)
-            if 0 <= x <= 25 <= y <= 50:
+            if 0 <= x <= half_s <= y <= max_s:
                 self.reload_mask(19)
         elif self.id == 23:
-            if 50 >= x >= 25 and 25 <= y <= 50:
+            if max_s >= x >= max_s // 2 and max_s // 2 <= y <= max_s:
                 self.reload_mask(21)
-            if 0 <= x <= 25 and 0 <= y <= 25:
+            if 0 <= x <= max_s // 2 and 0 <= y <= max_s // 2:
                 self.reload_mask(20)
         else:
             self.kill()
@@ -1433,7 +1442,7 @@ class Bonus(pygame.sprite.Sprite):
         self.game = game
         self.points = 500
         self.bonus = choice(available_bonuses)
-        # self.bonus = 'h'
+        # self.bonus = 's'
         self.image = load_image(f"{DIR_FOR_TANKS_IMG}"
                                 f"bonus\\{self.images[self.bonus]}")
         k = ((3 * self.game.TILE_SIZE) / 5) / self.image.get_rect().width

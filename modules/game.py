@@ -310,8 +310,8 @@ class Map:
         :return True если объект пересек границу
         :return False eсли объект не пересек границу"""
         if rect.y < self.rect.y or rect.x < self.rect.x \
-                or rect.right > self.rect.right \
-                or rect.bottom > self.rect.bottom:
+                or rect.right >= self.rect.right \
+                or rect.bottom >= self.rect.bottom:
             return True
         return False
 
@@ -464,6 +464,7 @@ class PauseScreen:
 
     def render(self, screen):
         # Затемняем основной экран
+        self.pscreen = pygame.transform.scale(self.pscreen, screen.get_size())
         self.pscreen.fill((150, 150, 150, 100))
         # Отрисовываем все необходимое
         screen.blit(self.pscreen, (0, 0),
@@ -472,6 +473,68 @@ class PauseScreen:
                                 - self.text.get_rect().w // 2,
                                 self.pscreen.get_rect().h // 3
                                 - self.text.get_rect().h // 2))
+
+
+class ConfirmWindow:
+    def __init__(self, header_text, confirm_text, game):
+        self.game = game
+        self.WIDTH, self.HEIGHT = game.screen.get_size()
+        self.header_text = header_text
+        self.confirm_text = confirm_text
+
+        self.width, self.height = int(self.WIDTH / 2), int(self.HEIGHT / 2)
+
+        self.background = pygame.Surface((self.width, self.height))
+        self.top = pygame.Surface((self.width, self.height / 6))
+        self.top.fill((70, 70, 68))
+        self.background.fill((147, 145, 142))
+        self.window_scr = pygame.Surface((self.width, self.height))
+
+        self.TS = self.game.TILE_SIZE
+        self.k1 = self.TS
+        self.k2 = self.TS // 2
+        self.k3 = self.TS // 3
+        self.cancel = Button('Отмена',
+                             x=self.WIDTH // 2 + self.width // 4 - (
+                                     self.WIDTH // 7),
+                             y=self.HEIGHT // 2 + self.height // 3,
+                             width=5 * self.k1 + self.k2,
+                             height=self.k1, size=self.k2)
+        self.exit_btn = Button('В главное меню',
+                               x=self.WIDTH // 2 - self.width // 4 - (
+                                       self.WIDTH // 7),
+                               y=self.HEIGHT // 2 + self.height // 3,
+                               width=5 * self.k1 + self.k2,
+                               height=self.k1, size=self.k2)
+
+    def draw(self, win, mouse_pos=None):
+        font_head = pygame.font.SysFont("comicsans", self.k2)
+        font_conf = pygame.font.SysFont("comicsans", self.k2)
+        header_text = font_head.render(self.header_text, True, (255, 255, 255))
+        confirm_text = font_conf.render(self.confirm_text, True, (15, 15, 14))
+        self.window_scr.blit(self.background, (0, 0))
+        self.window_scr.blit(self.top, (0, 0))
+        self.window_scr.blit(header_text, (
+            (self.width - header_text.get_width()) / 2, self.height * 0.03))
+        self.window_scr.blit(confirm_text, (
+            (self.width - confirm_text.get_width()) / 2, self.height / 4.5))
+        pygame.draw.line(self.window_scr, (57, 59, 61),
+                         (0, self.height * 0.16),
+                         (self.width, self.height * 0.16), 3)
+        pygame.draw.rect(self.window_scr, (57, 59, 61),
+                         (0, 0, self.width, self.height), 6)
+        win.blit(self.window_scr,
+                 ((self.WIDTH - self.width) / 2 + 2,
+                  (self.HEIGHT - self.height) / 2))
+        self.cancel.draw(win, mouse_pos)
+        self.exit_btn.draw(win, mouse_pos)
+
+    def update(self, mouse_state=None):
+        if self.cancel.click(mouse_state):
+            self.game.is_pause = False
+            self.game.exit_menue_w = None
+        elif self.exit_btn.click(mouse_state):
+            self.game.set_feedback('exit')
 
 
 class Button:
@@ -610,9 +673,7 @@ class GameOverScreen:
 
     def render(self, screen, mouse_pos=None):
         """Отрисовка всей информации + кнопок"""
-        self.screen = pygame.transform.scale(self.screen,
-                                             (screen.get_width(),
-                                              screen.get_height()))
+        self.screen = pygame.transform.scale(self.screen, screen.get_size())
         if self.can_move:
             return
         # Анимация плавного появления экрана
@@ -717,6 +778,7 @@ class Game:
         self.isGameOver = False
         self.isWin = None
         self.is_pause = False
+        self.exit_menue_w = None
         self.is_music_changed = [False, False]
 
         self.all_sprites = pygame.sprite.Group()
@@ -764,7 +826,8 @@ class Game:
         for i in self.map.get_objects('walls'):
             x = (i.x / self.map.koeff) + OFFSET
             y = (i.y / self.map.koeff) + OFFSET
-            Wall(x, y, self.map.get_tile_id(i.gid), self.TILE_SIZE, self)
+            Wall(x, y, self.map.get_tile_id(i.gid),
+                 self.TILE_SIZE, self)
 
     def create_eagle(self):
         # Создаем объект орла
@@ -781,6 +844,12 @@ class Game:
             if events.type == pygame.KEYDOWN:
                 if events.key == pygame.K_p:
                     self.is_pause = not self.is_pause
+                    self.exit_menue_w = None
+                if events.key == pygame.K_ESCAPE:
+                    self.is_pause = True
+                    self.exit_menue_w = ConfirmWindow(
+                        'Выйти в меню?', 'Действительно выйти в меню?',
+                        self)
             return
         if not self.is_pause:
             # Если игра проиграна, то необходимо отрисовать окно проигрыша
@@ -808,6 +877,8 @@ class Game:
             self.is_game_over()
         else:
             self.pause_screen.update()
+            if self.exit_menue_w is not None:
+                self.exit_menue_w.update(mouse_state)
 
     def render(self, mouse_pos=None):
         # Отрисовка по слоям.
@@ -830,6 +901,8 @@ class Game:
 
         if self.is_pause:
             self.pause_screen.render(self.screen)
+            if self.exit_menue_w is not None:
+                self.exit_menue_w.draw(self.screen, mouse_pos)
         if self.isGameOver:
             self.game_over_screen.render(self.screen, mouse_pos=mouse_pos)
 
@@ -865,3 +938,16 @@ class Game:
         tr_ls = self.track_list.copy()
         self.track_list.clear()
         return tr_ls
+
+    def get_players_data_for_next_game(self):
+        data = {}
+        for i in self.player_group:
+            data[i.player] = [i.lives, i.type_tanks]
+        return data
+
+    def set_players_data(self, data):
+        for i in self.player_group:
+            if i.player in data:
+                i.lives = data[i.player][0]
+                i.type_tanks = data[i.player][1]
+                i.set_properties()

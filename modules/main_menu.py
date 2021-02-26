@@ -1,7 +1,7 @@
 import os
 
 import pygame as pg
-from client import Client
+from client import Client, update_fps
 import sys
 import time
 import json
@@ -114,6 +114,7 @@ def func(game_type):
     running = True
     pg.mixer.music.stop()
     client = Client(map_index[0], map_index[1], screen)
+    print(WIDTH, HEIGHT)
     while running:
         screen.fill(pg.Color('black'))
         if client.is_exit:
@@ -125,6 +126,7 @@ def func(game_type):
             client.update(event)
         client.update()
         client.render()
+        screen.blit(update_fps(clock), (10, 0))
         pg.display.flip()
         clock.tick(FPS)
     pg.quit()

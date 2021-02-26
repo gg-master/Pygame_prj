@@ -253,10 +253,12 @@ class Client:
             feedback = self.game.feedback
             if feedback in ['continue', 'restart']:
                 self.number_level += 1 if feedback == 'continue' else 0
-                self.create_new_game(self.type_game,
-                                     self.game.level
-                                     if feedback == 'restart'
-                                     else self.number_level, self.screen)
+                level = self.game.level if feedback == 'restart' \
+                    else self.number_level
+                pl_data = self.game.get_players_data_for_next_game()
+                self.create_new_game(self.type_game, level, self.screen)
+                if feedback == 'continue':
+                    self.game.set_players_data(pl_data)
             elif feedback == 'exit':
                 self.is_exit = True
         # Узаем позицию мыши и состояние клавиш клавиатуры
@@ -290,13 +292,23 @@ class Client:
         return arr_state
 
 
+font = pygame.font.SysFont("Arial", 18)
+
+
+def update_fps(cl):
+    fps = str(int(cl.get_fps()))
+    fps_text = font.render(fps, 1, pygame.Color("coral"))
+    return fps_text
+
+
 def main() -> None:
     global screen, fullscreen
-    clock = pygame.time.Clock()
     running = True
+    clock = pygame.time.Clock()
     client = Client(1, 1, screen)
     while running:
         screen.fill(pygame.Color('black'))
+
         if client.is_exit:
             print('Выход в меню')
             break
@@ -320,13 +332,14 @@ def main() -> None:
             client.update(event)
         client.update()
         client.render()
+        screen.blit(update_fps(clock), (10, 0))
         pygame.display.flip()
         clock.tick(FPS)
     pygame.quit()
 
 
 if __name__ == '__main__':
-    WIDTH, HEIGHT = 950, 750
+    WIDTH, HEIGHT = 980, 750
     FPS = 60
     screen = pygame.display.set_mode((WIDTH, HEIGHT), pygame.RESIZABLE)
     monitor_size = [pygame.display.Info().current_w,
