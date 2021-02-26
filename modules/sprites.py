@@ -372,7 +372,11 @@ class Bullet(pygame.sprite.Sprite):
         if self.game.map.check_collide(self.rect):
             self.game.add_music_track(choice(['hit2', 'hit7']))
             self.kill()
-        c = pygame.sprite.spritecollideany(self, self.game.all_sprites)
+        c = pygame.sprite.spritecollide(self, self.game.all_sprites, False,
+                                        pygame.sprite.collide_mask)
+        if self in c:
+            del c[c.index(self)]
+        c = c[0] if c else None
         if c is not None:
             # Пуля врезалась в стену
             if c in self.game.wall_group and c.isWall:

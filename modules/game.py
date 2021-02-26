@@ -30,7 +30,7 @@ TILE_FOR_MOBS = 17
 
 def set_constans_from_settings(screen_surf):
     global MAP_SIZE, OFFSET
-    OFFSET = 25
+    OFFSET = 40
 
     sc_w, sc_h = screen_surf.get_size()
     sc_w -= 2 * OFFSET
@@ -405,7 +405,9 @@ class Menu(pygame.sprite.Sprite):
         self.image.blit(self.p, (x, y, p_rc.width, p_rc.height))
         # Отрисовка жизни у первого игрока
         x, y = p_rc.width + 8, y - 3
-        self.image.blit(p1_lives, (x, y))
+        pl_lv = p1_lives.get_rect()
+        self.image.blit(p1_lives, (x, y,
+                                   pl_lv.width, pl_lv.height))
         # Если игра на двоих
         if self.is_two_pl:
             x, y = 0, y + pl_lv.height + 10
@@ -427,7 +429,8 @@ class Menu(pygame.sprite.Sprite):
         self.image.blit(self.flag, (x, y, fl_rc.width, fl_rc.height))
         # Отрисовка номера уровня
         x, y = x + fl_rc.width // 2, y + fl_rc.height // 1.5
-        self.image.blit(level_text, (x, y))
+        lev_rect = level_text.get_rect()
+        self.image.blit(level_text, (x, y, lev_rect.width, lev_rect.height))
 
     def update(self, *args):
         # Обновление окна меню
@@ -759,7 +762,8 @@ class Game:
         if not self.map.check_('walls'):
             return
         for i in self.map.get_objects('walls'):
-            x, y = i.x / self.map.koeff + OFFSET, i.y / self.map.koeff + OFFSET
+            x = (i.x / self.map.koeff) + OFFSET
+            y = (i.y / self.map.koeff) + OFFSET
             Wall(x, y, self.map.get_tile_id(i.gid), self.TILE_SIZE, self)
 
     def create_eagle(self):

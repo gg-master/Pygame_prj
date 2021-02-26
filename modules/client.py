@@ -294,7 +294,7 @@ def main() -> None:
     global screen, fullscreen
     clock = pygame.time.Clock()
     running = True
-    client = Client(1, 4, screen)
+    client = Client(1, 1, screen)
     while running:
         screen.fill(pygame.Color('black'))
         if client.is_exit:
