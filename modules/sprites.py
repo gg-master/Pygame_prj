@@ -379,7 +379,12 @@ class Bullet(pygame.sprite.Sprite):
         if self in c:
             del c[c.index(self)]
         # print(c) if isinstance(self.who_shoot, Player) else ''
-        c = c[0] if c else None
+        for collide_obj in c:
+            if not self.alive():
+                return
+            self.check_collide(collide_obj)
+
+    def check_collide(self, c):
         if c is not None:
             # Пуля врезалась в стену
             if c in self.game.wall_group and c.isWall:
@@ -388,7 +393,6 @@ class Bullet(pygame.sprite.Sprite):
                     if c.isBroken:
                         self.game.add_music_track(choice(['hit2', 'hit5']))
                         c.change_yourself(coord_collide)
-
                     else:
                         self.game.add_music_track('hit3')
                     self.kill()
