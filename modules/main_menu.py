@@ -45,6 +45,7 @@ border = pg.transform.scale(pg.image.load('data/system_image/'
                                 round(HEIGHT * 0.6944444)))
 tanks_battle = pg.image.load('data/system_image/TanksBattle.png')
 tanks_battle_rect = tanks_battle.get_rect()
+rules_back = pg.image.load('data/system_image/rules_back.png')
 bck_dark = pg.Surface((WIDTH, HEIGHT))
 bck_dark.fill((0, 0, 0))
 bck_dark.set_alpha(100)
@@ -111,6 +112,8 @@ def start_game():
 
 def func(game_type):
     # print('Congrats!', game_type)
+    print('typ: ', map_index)
+    print('map_index[0]', map_index[0])
     running = True
     pg.mixer.music.stop()
     client = Client(map_index[0], map_index[1], screen)
@@ -538,21 +541,22 @@ class Button:
 
 def choose_level_screen(typ):
     global lvl_image, map_index
-    if not lvl_image:
-        if (type(typ) == tuple and typ[0] == 1) or typ == 1:
-            lvl_image = pg.transform.scale(pg.image.load('data'
-                                                         '/system_image'
-                                                         '/lvl1_1.jpg'),
-                                           (round(WIDTH * 0.32447916),
-                                            round(HEIGHT * 0.56296)))
-            map_index = (1, 1)
-        else:
-            lvl_image = pg.transform.scale(pg.image.load('data'
-                                                         '/system_image'
-                                                         '/lvl2_1.jpg'),
-                                           (round(WIDTH * 0.32447916),
-                                            round(HEIGHT * 0.56296)))
-            map_index = (2, 1)
+    if (type(typ) == tuple and typ[0] == 1) or typ == 1:
+        lvl_image = pg.transform.scale(pg.image.load('data'
+                                                     '/system_image'
+                                                     '/lvl1_1.jpg'),
+                                       (round(WIDTH * 0.32447916),
+                                        round(HEIGHT * 0.56296)))
+        map_index = (1, 1)
+        print('map_index:1', map_index)
+    else:
+        lvl_image = pg.transform.scale(pg.image.load('data'
+                                                     '/system_image'
+                                                     '/lvl2_1.jpg'),
+                                       (round(WIDTH * 0.32447916),
+                                        round(HEIGHT * 0.56296)))
+        map_index = (2, 1)
+        print('map_index:2', map_index)
     print('typ', typ)
     run = True
     while run:
@@ -658,6 +662,28 @@ def down_drop_text(surf, image, rect):
         clock.tick(240)
 
 
+def rules_screen():
+    run = True
+    while run:
+        for event in pg.event.get():
+            if event.type == pg.QUIT:
+                terminate()
+            if event.type == pg.MOUSEBUTTONDOWN and event.button == 1:
+                response = [btn.click(event.pos, act, arg)
+                            for btn, act, arg in rules_btn]
+                for x in response:
+                    if len(x):
+                        return x
+                pg.time.delay(1)
+        st_screen.fill((0, 0, 0))
+        st_screen.blit(bg_screen, (0, 0))
+        st_screen.blit(bck_dark, (0, 0))
+        [i[0].draw(st_screen) for i in rules_btn]
+        screen.blit(st_screen, (0, 0))
+        pg.display.flip()
+        clock.tick(FPS)
+
+
 def first_show():
     time.sleep(1)
     pg.mixer.music.play(loops=-1)
@@ -748,7 +774,7 @@ main_menu_buttons = [[Button('Играть', WIDTH * 0.34, HEIGHT * 0.5,
                       (False,)],
                      [Button('Правила', WIDTH * 0.34, HEIGHT * 0.648,
                              width=int(0.321 * WIDTH),
-                             height=int(0.063 * HEIGHT)), False, (False,)],
+                             height=int(0.063 * HEIGHT)), rules_screen, (False,)],
                      [Button('Выход', WIDTH * 0.34, HEIGHT * 0.722,
                              width=int(0.321 * WIDTH),
                              height=int(0.063 * HEIGHT)), change_exit_f,
@@ -889,6 +915,8 @@ lvl_scrn_buttons_2 = [[Button('Уровень 1', WIDTH * 0.125, HEIGHT * 0.06,
                               width=int(0.321 * WIDTH),
                               height=int(0.063 * HEIGHT)), start_game,
                        (False,)]]
+
+rules_btn = [[Button('Назад', WIDTH * 0.33958, HEIGHT * 0.8), start_screen, (1,)]]
 
 
 def main():
