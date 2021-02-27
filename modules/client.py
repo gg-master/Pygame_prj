@@ -4,17 +4,10 @@ from modules.game import Game
 from modules.default_funcs import load_settings, load_image
 from time import sleep
 
-WIDTH, HEIGHT = 950, 750
-FPS = 60
-
 pygame.init()
 # Инициализация и установка количества звуковых каналов
 pygame.mixer.init()
 pygame.mixer.set_num_channels(35)
-# screen = pygame.display.set_mode((WIDTH, HEIGHT), pygame.RESIZABLE)
-monitor_size = [pygame.display.Info().current_w,
-                pygame.display.Info().current_h]
-background = pygame.Surface((WIDTH, HEIGHT))
 
 SOUND_DIR = 'data\\music\\'
 
@@ -223,6 +216,7 @@ class Client:
     Класс клиента, который непосредственно на устройстве пользователя
     запускается и обрабатывает класс игры
     """
+
     def __init__(self, type_game, number_level, screen_surf):
         self.settings = load_settings()
         self.pl_settings = self.settings['player_settings']
@@ -259,10 +253,12 @@ class Client:
             feedback = self.game.feedback
             if feedback in ['continue', 'restart']:
                 self.number_level += 1 if feedback == 'continue' else 0
-                self.create_new_game(self.type_game,
-                                     self.game.level
-                                     if feedback == 'restart'
-                                     else self.number_level, self.screen)
+                level = self.game.level if feedback == 'restart' \
+                    else self.number_level
+                pl_data = self.game.get_players_data_for_next_game()
+                self.create_new_game(self.type_game, level, self.screen)
+                if feedback == 'continue':
+                    self.game.set_players_data(pl_data)
             elif feedback == 'exit':
                 self.is_exit = True
         # Узаем позицию мыши и состояние клавиш клавиатуры
@@ -296,14 +292,23 @@ class Client:
         return arr_state
 
 
-fullscreen = False
+font = pygame.font.SysFont("Arial", 18)
 
-if __name__ == '__main__':
-    clock = pygame.time.Clock()
+
+def update_fps(cl):
+    fps = str(int(cl.get_fps()))
+    fps_text = font.render(fps, 1, pygame.Color("coral"))
+    return fps_text
+
+
+def main() -> None:
+    global screen, fullscreen
     running = True
-    client = Client(1, 21, screen)
+    clock = pygame.time.Clock()
+    client = Client(1, 1, screen)
     while running:
         screen.fill(pygame.Color('black'))
+
         if client.is_exit:
             print('Выход в меню')
             break
@@ -327,6 +332,18 @@ if __name__ == '__main__':
             client.update(event)
         client.update()
         client.render()
+        screen.blit(update_fps(clock), (10, 0))
         pygame.display.flip()
         clock.tick(FPS)
     pygame.quit()
+
+
+if __name__ == '__main__':
+    WIDTH, HEIGHT = 980, 750
+    FPS = 60
+    screen = pygame.display.set_mode((WIDTH, HEIGHT), pygame.RESIZABLE)
+    monitor_size = [pygame.display.Info().current_w,
+                    pygame.display.Info().current_h]
+    background = pygame.Surface((WIDTH, HEIGHT))
+    fullscreen = False
+    main()

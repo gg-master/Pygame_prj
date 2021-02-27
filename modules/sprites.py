@@ -60,6 +60,7 @@ class Player(pygame.sprite.Sprite):
         # После объявления некоторых параметров для танка игрока
         # устанавливае значения для этип параметров в зависимости от типа танка
         self.set_properties()
+
         # Размер клетки на поле
         self.mask = self.image = None
         # Загружаем маску и картинку танка
@@ -130,9 +131,10 @@ class Player(pygame.sprite.Sprite):
         """
         if self.type_tanks == 't1':
             self.speed = int_r(2 * self.speed_k)  # 2
+            self.bullet_speed = 5
         elif self.type_tanks == 't2':
             self.speed = int_r(3 * self.speed_k)  # 3
-            self.bullet_speed = int_r(6 * self.speed_k)
+            self.bullet_speed = 6
         elif self.type_tanks == 't3':
             self.bullet_speed = 7
 
@@ -346,7 +348,7 @@ class Bullet(pygame.sprite.Sprite):
         self.is_ricochet = False
         self.from_ricochet = None
         self.side = side
-        self.speed_k = self.game.TILE_SIZE / 50
+        self.speed_k = max(self.game.TILE_SIZE / 50, 0.6)
         self.speed = int_r(speed * self.speed_k)
         self.speedy, self.speedx = 0, 0
 
@@ -371,7 +373,18 @@ class Bullet(pygame.sprite.Sprite):
         if self.game.map.check_collide(self.rect):
             self.game.add_music_track(choice(['hit2', 'hit7']))
             self.kill()
-        c = pygame.sprite.spritecollideany(self, self.game.all_sprites)
+            return
+        c = pygame.sprite.spritecollide(self, self.game.all_sprites, False,
+                                        pygame.sprite.collide_rect)
+        if self in c:
+            del c[c.index(self)]
+        # print(c) if isinstance(self.who_shoot, Player) else ''
+        for collide_obj in c:
+            if not self.alive():
+                return
+            self.check_collide(collide_obj)
+
+    def check_collide(self, c):
         if c is not None:
             # Пуля врезалась в стену
             if c in self.game.wall_group and c.isWall:
@@ -383,6 +396,7 @@ class Bullet(pygame.sprite.Sprite):
                     else:
                         self.game.add_music_track('hit3')
                     self.kill()
+                    return
             # Если пуля врага врезелась в танк игрока
             if c in self.game.player_group:
                 if self.who_shoot != c:
@@ -392,12 +406,14 @@ class Bullet(pygame.sprite.Sprite):
                     self.game.add_music_track(choice(['hit4', 'hit3']))
                     c.kill()
                     self.kill()
+                    return
             # Если пуля врезалась в другую пулю, выпущенную из вражеского танка
             if c in self.game.bullets and c is not self:
                 if self.who_shoot != c.who_shoot:
                     self.game.add_music_track(choice(['hit1', 'hit2']))
                     self.kill()
                     c.kill()
+                    return
             # Пуля врезалась в бота и при этом выстрел был от игрока
             if c in self.game.mobs_group and\
                     isinstance(self.who_shoot, Player):
@@ -410,11 +426,13 @@ class Bullet(pygame.sprite.Sprite):
                 # Если бот уничтожен, то зачисляем очки
                 if not c.alive():
                     self.who_shoot.earn_points(c)
+                return
             # Пуля врезалась в орла
             if c == self.game.eagle:
                 self.game.add_music_track('hit3')
                 c.eagle_break()
                 self.kill()
+                return
 
     def handling_recochet(self, c):
         rez = self.can_ricochet(c)
@@ -570,7 +588,7 @@ class Bot(pygame.sprite.Sprite):
 
         self.isFreeze = self.spawn_stopper = self.hidden = False
 
-        self.speed_k = self.TILE_SIZE / 50
+        self.speed_k = max(self.TILE_SIZE / 50, 0.6)
         self.speed = int_r(2 * self.speed_k)
         self.speedx = self.speedy = 0
 
@@ -1385,14 +1403,14 @@ class Wall(pygame.sprite.Sprite):
                 elif half_s2 <= y <= max_s:
                     self.reload_mask(21)
         elif self.id == 22:
-            if 50 >= x >= 25 >= y >= 0:
+            if max_s >= x >= max_s // 2 >= y >= 0:
                 self.reload_mask(18)
-            if 0 <= x <= 25 <= y <= 50:
+            if 0 <= x <= half_s <= y <= max_s:
                 self.reload_mask(19)
         elif self.id == 23:
-            if 50 >= x >= 25 and 25 <= y <= 50:
+            if max_s >= x >= max_s // 2 and max_s // 2 <= y <= max_s:
                 self.reload_mask(21)
-            if 0 <= x <= 25 and 0 <= y <= 25:
+            if 0 <= x <= max_s // 2 and 0 <= y <= max_s // 2:
                 self.reload_mask(20)
         else:
             self.kill()
@@ -1428,13 +1446,13 @@ class Bonus(pygame.sprite.Sprite):
         self.game = game
         self.points = 500
         self.bonus = choice(available_bonuses)
-        # self.bonus = 'h'
+        # self.bonus = 's'
         self.image = load_image(f"{DIR_FOR_TANKS_IMG}"
                                 f"bonus\\{self.images[self.bonus]}")
-        k = ((3 * self.game.TILE_SIZE) // 4) // self.image.get_rect().width
-        self.image = pygame.transform.scale(self.image,
-                                            (self.image.get_rect().width * k,
-                                             self.image.get_rect().height * k))
+        k = ((3 * self.game.TILE_SIZE) / 5) / self.image.get_rect().width
+        self.image = pygame.transform.scale(
+            self.image, (int(self.image.get_rect().width * k),
+                         int(self.image.get_rect().height * k)))
         self.mask = pygame.mask.from_surface(self.image)
         self.rect = self.image.get_rect()
         self.hide_image = pygame.Surface((self.rect.width, self.rect.height),
