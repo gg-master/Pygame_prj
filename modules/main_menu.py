@@ -56,6 +56,7 @@ settings_wnd_f = False
 rules_wnd_f = False
 is_save = False
 bck_is_drk = False
+game_mode_f = False
 
 
 def terminate():
@@ -101,16 +102,16 @@ def change_lvl_image(index):
     map_index = list(map(int, index.split('_')))
     print(index)
     lvl_image = pg.transform.scale(
-        pg.image.load(f'data/system_image/lvl{index}.jpg'),
+        pg.image.load(f'data/system_image/lvl_images/{index}.png'),
         (round(WIDTH * 0.32447916), round(HEIGHT * 0.56296)))
     return [choose_level_screen, map_index]
 
 
 def start_game():
-    return [func, map_index]
+    return [func]
 
 
-def func(game_type):
+def func():
     # print('Congrats!', game_type)
     print('typ: ', map_index)
     print('map_index[0]', map_index[0])
@@ -177,7 +178,7 @@ class InputBox:
                 else:
                     self.text = pg.key.name(event.key)
                     self.text = f'keypad ' \
-                        f'{self.text.split("[")[1].split("]")[0]}' \
+                                f'{self.text.split("[")[1].split("]")[0]}' \
                         if '[' in self.text or ']' in self.text else self.text
                     self.btn = event.key
                     self.active = False
@@ -542,23 +543,27 @@ class Button:
 
 
 def choose_level_screen(typ):
-    global lvl_image, map_index
-    if (type(typ) == tuple and typ[0] == 1) or typ == 1:
-        lvl_image = pg.transform.scale(pg.image.load('data'
-                                                     '/system_image'
-                                                     '/lvl1_1.jpg'),
-                                       (round(WIDTH * 0.32447916),
-                                        round(HEIGHT * 0.56296)))
-        map_index = (1, 1)
-        print('map_index:1', map_index)
-    else:
-        lvl_image = pg.transform.scale(pg.image.load('data'
-                                                     '/system_image'
-                                                     '/lvl2_1.jpg'),
-                                       (round(WIDTH * 0.32447916),
-                                        round(HEIGHT * 0.56296)))
-        map_index = (2, 1)
-        print('map_index:2', map_index)
+    global lvl_image, map_index, game_mode_f
+    if not game_mode_f:
+        game_mode_f = True
+        if (type(typ) == tuple and typ[0] == 1) or typ == 1:
+            lvl_image = pg.transform.scale(pg.image.load('data'
+                                                         '/system_image'
+                                                         '/lvl_images'
+                                                         '/1_1.png'),
+                                           (round(WIDTH * 0.32447916),
+                                            round(HEIGHT * 0.56296)))
+            map_index = (1, 1)
+            print('map_index:1', map_index)
+        else:
+            lvl_image = pg.transform.scale(pg.image.load('data'
+                                                         '/system_image'
+                                                         '/lvl_images'
+                                                         '/2_1.png'),
+                                           (round(WIDTH * 0.32447916),
+                                            round(HEIGHT * 0.56296)))
+            map_index = (2, 1)
+            print('map_index:2', map_index)
     print('typ', typ)
     run = True
     while run:
@@ -594,7 +599,10 @@ def choose_level_screen(typ):
 
 
 def game_mode_screen():
+    global game_mode_f
+    game_mode_f = False
     run = True
+
     while run:
         for event in pg.event.get():
             if event.type == pg.QUIT:
@@ -776,7 +784,8 @@ main_menu_buttons = [[Button('Играть', WIDTH * 0.34, HEIGHT * 0.5,
                       (False,)],
                      [Button('Правила', WIDTH * 0.34, HEIGHT * 0.648,
                              width=int(0.321 * WIDTH),
-                             height=int(0.063 * HEIGHT)), rules_screen, (False,)],
+                             height=int(0.063 * HEIGHT)), rules_screen,
+                      (False,)],
                      [Button('Выход', WIDTH * 0.34, HEIGHT * 0.722,
                              width=int(0.321 * WIDTH),
                              height=int(0.063 * HEIGHT)), change_exit_f,
@@ -820,47 +829,107 @@ settings_wnd_btns = [[Button('Сохранить', WIDTH * 0.491666, HEIGHT * 0.
                              size=round(WIDTH * 0.010416), limit=(20, 0)),
                       default_settings, (False,)]]
 
-lvl_scrn_buttons_1 = [[Button('Уровень 1', WIDTH * 0.125, HEIGHT * 0.06,
+lvl_scrn_buttons_1 = [[Button('Уровень 1', 0, HEIGHT * 0.06,
                               width=int(WIDTH * 0.25),
-                              height=int(HEIGHT * 0.05), limit=(90, 0)),
-                       change_lvl_image, ('1_1',)],
-                      [Button('Уровень 2', WIDTH * 0.125, HEIGHT * 0.13,
+                              height=int(HEIGHT * 0.05),
+                              limit=(WIDTH * 0.046875, 0)), change_lvl_image,
+                       ('1_1',)],
+                      [Button('Уровень 2', 0, HEIGHT * 0.13,
                               width=int(WIDTH * 0.25),
-                              height=int(HEIGHT * 0.05), limit=(90, 0)),
-                       change_lvl_image, ('1_2',)],
-                      [Button('Уровень 3', WIDTH * 0.125, HEIGHT * 0.20,
+                              height=int(HEIGHT * 0.05),
+                              limit=(WIDTH * 0.046875, 0)), change_lvl_image,
+                       ('1_2',)],
+                      [Button('Уровень 3', 0, HEIGHT * 0.20,
                               width=int(WIDTH * 0.25),
-                              height=int(HEIGHT * 0.05), limit=(90, 0)),
-                       change_lvl_image, ('1_3',)],
-                      [Button('Уровень 4', WIDTH * 0.125, HEIGHT * 0.27,
+                              height=int(HEIGHT * 0.05),
+                              limit=(WIDTH * 0.046875, 0)), change_lvl_image,
+                       ('1_3',)],
+                      [Button('Уровень 4', 0, HEIGHT * 0.27,
                               width=int(WIDTH * 0.25),
-                              height=int(HEIGHT * 0.05), limit=(90, 0)),
-                       change_lvl_image, ('1_4',)],
-                      [Button('Уровень 5', WIDTH * 0.125, HEIGHT * 0.34,
+                              height=int(HEIGHT * 0.05),
+                              limit=(WIDTH * 0.046875, 0)), change_lvl_image,
+                       ('1_4',)],
+                      [Button('Уровень 5', 0, HEIGHT * 0.34,
                               width=int(WIDTH * 0.25),
-                              height=int(HEIGHT * 0.05), limit=(90, 0)),
-                       change_lvl_image, ('1_5',)],
-                      [Button('Уровень 6', WIDTH * 0.125, HEIGHT * 0.41,
+                              height=int(HEIGHT * 0.05),
+                              limit=(WIDTH * 0.046875, 0)), change_lvl_image,
+                       ('1_5',)],
+                      [Button('Уровень 6', 0, HEIGHT * 0.41,
                               width=int(WIDTH * 0.25),
-                              height=int(HEIGHT * 0.05), limit=(90, 0)),
-                       change_lvl_image, ('1_6',)],
-                      [Button('Уровень 7', WIDTH * 0.125, HEIGHT * 0.48,
+                              height=int(HEIGHT * 0.05),
+                              limit=(WIDTH * 0.046875, 0)), change_lvl_image,
+                       ('1_6',)],
+                      [Button('Уровень 7', 0, HEIGHT * 0.48,
                               width=int(WIDTH * 0.25),
-                              height=int(HEIGHT * 0.05), limit=(90, 0)),
-                       change_lvl_image, ('1_7',)],
-                      [Button('Уровень 8', WIDTH * 0.125, HEIGHT * 0.55,
+                              height=int(HEIGHT * 0.05),
+                              limit=(WIDTH * 0.046875, 0)), change_lvl_image,
+                       ('1_7',)],
+                      [Button('Уровень 8', 0, HEIGHT * 0.55,
                               width=int(WIDTH * 0.25),
-                              height=int(HEIGHT * 0.05), limit=(90, 0)),
-                       change_lvl_image, ('1_8',)],
-                      [Button('Уровень 9', WIDTH * 0.125, HEIGHT * 0.62,
+                              height=int(HEIGHT * 0.05),
+                              limit=(WIDTH * 0.046875, 0)), change_lvl_image,
+                       ('1_8',)],
+                      [Button('Уровень 9', 0, HEIGHT * 0.62,
                               width=int(WIDTH * 0.25),
-                              height=int(HEIGHT * 0.05), limit=(90, 0)),
-                       change_lvl_image, ('1_9',)],
-                      [Button('Уровень 10', WIDTH * 0.125, HEIGHT * 0.69,
+                              height=int(HEIGHT * 0.05),
+                              limit=(WIDTH * 0.046875, 0)), change_lvl_image,
+                       ('1_9',)],
+                      [Button('Уровень 10', 0, HEIGHT * 0.69,
                               width=int(WIDTH * 0.25),
-                              height=int(HEIGHT * 0.05), limit=(90, 0)),
-                       change_lvl_image, ('1_10',)],
-                      [Button('Назад', WIDTH * 0.08957, HEIGHT * 0.85,
+                              height=int(HEIGHT * 0.05),
+                              limit=(WIDTH * 0.046875, 0)), change_lvl_image,
+                       ('1_10',)],
+                      [Button('Уровень 11', WIDTH * 0.2083333, HEIGHT * 0.06,
+                              width=int(WIDTH * 0.25),
+                              height=int(HEIGHT * 0.05),
+                              limit=(WIDTH * 0.046875, 0)), change_lvl_image,
+                       ('1_11',)],
+                      [Button('Уровень 12', WIDTH * 0.2083333, HEIGHT * 0.13,
+                              width=int(WIDTH * 0.25),
+                              height=int(HEIGHT * 0.05),
+                              limit=(WIDTH * 0.046875, 0)), change_lvl_image,
+                       ('1_12',)],
+                      [Button('Уровень 13', WIDTH * 0.2083333, HEIGHT * 0.20,
+                              width=int(WIDTH * 0.25),
+                              height=int(HEIGHT * 0.05),
+                              limit=(WIDTH * 0.046875, 0)), change_lvl_image,
+                       ('1_13',)],
+                      [Button('Уровень 14', WIDTH * 0.2083333, HEIGHT * 0.27,
+                              width=int(WIDTH * 0.25),
+                              height=int(HEIGHT * 0.05),
+                              limit=(WIDTH * 0.046875, 0)), change_lvl_image,
+                       ('1_14',)],
+                      [Button('Уровень 15', WIDTH * 0.2083333, HEIGHT * 0.34,
+                              width=int(WIDTH * 0.25),
+                              height=int(HEIGHT * 0.05),
+                              limit=(WIDTH * 0.046875, 0)), change_lvl_image,
+                       ('1_15',)],
+                      [Button('Уровень 16', WIDTH * 0.2083333, HEIGHT * 0.41,
+                              width=int(WIDTH * 0.25),
+                              height=int(HEIGHT * 0.05),
+                              limit=(WIDTH * 0.046875, 0)), change_lvl_image,
+                       ('1_16',)],
+                      [Button('Уровень 17', WIDTH * 0.2083333, HEIGHT * 0.48,
+                              width=int(WIDTH * 0.25),
+                              height=int(HEIGHT * 0.05),
+                              limit=(WIDTH * 0.046875, 0)), change_lvl_image,
+                       ('1_17',)],
+                      [Button('Уровень 18', WIDTH * 0.2083333, HEIGHT * 0.55,
+                              width=int(WIDTH * 0.25),
+                              height=int(HEIGHT * 0.05),
+                              limit=(WIDTH * 0.046875, 0)), change_lvl_image,
+                       ('1_18',)],
+                      [Button('Уровень 19', WIDTH * 0.2083333, HEIGHT * 0.62,
+                              width=int(WIDTH * 0.25),
+                              height=int(HEIGHT * 0.05),
+                              limit=(WIDTH * 0.046875, 0)), change_lvl_image,
+                       ('1_19',)],
+                      [Button('Уровень 20', WIDTH * 0.2083333, HEIGHT * 0.69,
+                              width=int(WIDTH * 0.25),
+                              height=int(HEIGHT * 0.05),
+                              limit=(WIDTH * 0.046875, 0)), change_lvl_image,
+                       ('1_20',)],
+                      [Button('Назад', WIDTH * 0.04427083, HEIGHT * 0.85,
                               width=int(0.321 * WIDTH),
                               height=int(0.063 * HEIGHT)), game_mode_screen,
                        (False,)],
@@ -869,47 +938,107 @@ lvl_scrn_buttons_1 = [[Button('Уровень 1', WIDTH * 0.125, HEIGHT * 0.06,
                               height=int(0.063 * HEIGHT)), start_game,
                        (False,)]]
 
-lvl_scrn_buttons_2 = [[Button('Уровень 1', WIDTH * 0.125, HEIGHT * 0.06,
+lvl_scrn_buttons_2 = [[Button('Уровень 1', 0, HEIGHT * 0.06,
                               width=int(WIDTH * 0.25),
-                              height=int(HEIGHT * 0.05), limit=(90, 0)),
-                       change_lvl_image, ('2_1',)],
-                      [Button('Уровень 2', WIDTH * 0.125, HEIGHT * 0.13,
+                              height=int(HEIGHT * 0.05),
+                              limit=(WIDTH * 0.046875, 0)), change_lvl_image,
+                       ('2_1',)],
+                      [Button('Уровень 2', 0, HEIGHT * 0.13,
                               width=int(WIDTH * 0.25),
-                              height=int(HEIGHT * 0.05), limit=(90, 0)),
-                       change_lvl_image, ('2_2',)],
-                      [Button('Уровень 3', WIDTH * 0.125, HEIGHT * 0.20,
+                              height=int(HEIGHT * 0.05),
+                              limit=(WIDTH * 0.046875, 0)), change_lvl_image,
+                       ('2_2',)],
+                      [Button('Уровень 3', 0, HEIGHT * 0.20,
                               width=int(WIDTH * 0.25),
-                              height=int(HEIGHT * 0.05), limit=(90, 0)),
-                       change_lvl_image, ('2_3',)],
-                      [Button('Уровень 4', WIDTH * 0.125, HEIGHT * 0.27,
+                              height=int(HEIGHT * 0.05),
+                              limit=(WIDTH * 0.046875, 0)), change_lvl_image,
+                       ('2_3',)],
+                      [Button('Уровень 4', 0, HEIGHT * 0.27,
                               width=int(WIDTH * 0.25),
-                              height=int(HEIGHT * 0.05), limit=(90, 0)),
-                       change_lvl_image, ('2_4',)],
-                      [Button('Уровень 5', WIDTH * 0.125, HEIGHT * 0.34,
+                              height=int(HEIGHT * 0.05),
+                              limit=(WIDTH * 0.046875, 0)), change_lvl_image,
+                       ('2_4',)],
+                      [Button('Уровень 5', 0, HEIGHT * 0.34,
                               width=int(WIDTH * 0.25),
-                              height=int(HEIGHT * 0.05), limit=(90, 0)),
-                       change_lvl_image, ('2_5',)],
-                      [Button('Уровень 6', WIDTH * 0.125, HEIGHT * 0.41,
+                              height=int(HEIGHT * 0.05),
+                              limit=(WIDTH * 0.046875, 0)), change_lvl_image,
+                       ('2_5',)],
+                      [Button('Уровень 6', 0, HEIGHT * 0.41,
                               width=int(WIDTH * 0.25),
-                              height=int(HEIGHT * 0.05), limit=(90, 0)),
-                       change_lvl_image, ('2_6',)],
-                      [Button('Уровень 7', WIDTH * 0.125, HEIGHT * 0.48,
+                              height=int(HEIGHT * 0.05),
+                              limit=(WIDTH * 0.046875, 0)), change_lvl_image,
+                       ('2_6',)],
+                      [Button('Уровень 7', 0, HEIGHT * 0.48,
                               width=int(WIDTH * 0.25),
-                              height=int(HEIGHT * 0.05), limit=(90, 0)),
-                       change_lvl_image, ('2_7',)],
-                      [Button('Уровень 8', WIDTH * 0.125, HEIGHT * 0.55,
+                              height=int(HEIGHT * 0.05),
+                              limit=(WIDTH * 0.046875, 0)), change_lvl_image,
+                       ('2_7',)],
+                      [Button('Уровень 8', 0, HEIGHT * 0.55,
                               width=int(WIDTH * 0.25),
-                              height=int(HEIGHT * 0.05), limit=(90, 0)),
-                       change_lvl_image, ('2_8',)],
-                      [Button('Уровень 9', WIDTH * 0.125, HEIGHT * 0.62,
+                              height=int(HEIGHT * 0.05),
+                              limit=(WIDTH * 0.046875, 0)), change_lvl_image,
+                       ('2_8',)],
+                      [Button('Уровень 9', 0, HEIGHT * 0.62,
                               width=int(WIDTH * 0.25),
-                              height=int(HEIGHT * 0.05), limit=(90, 0)),
-                       change_lvl_image, ('2_9',)],
-                      [Button('Уровень 10', WIDTH * 0.125, HEIGHT * 0.69,
+                              height=int(HEIGHT * 0.05),
+                              limit=(WIDTH * 0.046875, 0)), change_lvl_image,
+                       ('2_9',)],
+                      [Button('Уровень 10', 0, HEIGHT * 0.69,
                               width=int(WIDTH * 0.25),
-                              height=int(HEIGHT * 0.05), limit=(90, 0)),
-                       change_lvl_image, ('2_10',)],
-                      [Button('Назад', WIDTH * 0.089583, HEIGHT * 0.85,
+                              height=int(HEIGHT * 0.05),
+                              limit=(WIDTH * 0.046875, 0)), change_lvl_image,
+                       ('2_10',)],
+                      [Button('Уровень 11', WIDTH * 0.2083333, HEIGHT * 0.06,
+                              width=int(WIDTH * 0.25),
+                              height=int(HEIGHT * 0.05),
+                              limit=(WIDTH * 0.046875, 0)), change_lvl_image,
+                       ('2_11',)],
+                      [Button('Уровень 12', WIDTH * 0.2083333, HEIGHT * 0.13,
+                              width=int(WIDTH * 0.25),
+                              height=int(HEIGHT * 0.05),
+                              limit=(WIDTH * 0.046875, 0)), change_lvl_image,
+                       ('2_12',)],
+                      [Button('Уровень 13', WIDTH * 0.2083333, HEIGHT * 0.20,
+                              width=int(WIDTH * 0.25),
+                              height=int(HEIGHT * 0.05),
+                              limit=(WIDTH * 0.046875, 0)), change_lvl_image,
+                       ('2_13',)],
+                      [Button('Уровень 14', WIDTH * 0.2083333, HEIGHT * 0.27,
+                              width=int(WIDTH * 0.25),
+                              height=int(HEIGHT * 0.05),
+                              limit=(WIDTH * 0.046875, 0)), change_lvl_image,
+                       ('2_14',)],
+                      [Button('Уровень 15', WIDTH * 0.2083333, HEIGHT * 0.34,
+                              width=int(WIDTH * 0.25),
+                              height=int(HEIGHT * 0.05),
+                              limit=(WIDTH * 0.046875, 0)), change_lvl_image,
+                       ('2_15',)],
+                      [Button('Уровень 16', WIDTH * 0.2083333, HEIGHT * 0.41,
+                              width=int(WIDTH * 0.25),
+                              height=int(HEIGHT * 0.05),
+                              limit=(WIDTH * 0.046875, 0)), change_lvl_image,
+                       ('2_16',)],
+                      [Button('Уровень 17', WIDTH * 0.2083333, HEIGHT * 0.48,
+                              width=int(WIDTH * 0.25),
+                              height=int(HEIGHT * 0.05),
+                              limit=(WIDTH * 0.046875, 0)), change_lvl_image,
+                       ('2_17',)],
+                      [Button('Уровень 18', WIDTH * 0.2083333, HEIGHT * 0.55,
+                              width=int(WIDTH * 0.25),
+                              height=int(HEIGHT * 0.05),
+                              limit=(WIDTH * 0.046875, 0)), change_lvl_image,
+                       ('2_18',)],
+                      [Button('Уровень 19', WIDTH * 0.2083333, HEIGHT * 0.62,
+                              width=int(WIDTH * 0.25),
+                              height=int(HEIGHT * 0.05),
+                              limit=(WIDTH * 0.046875, 0)), change_lvl_image,
+                       ('2_19',)],
+                      [Button('Уровень 20', WIDTH * 0.2083333, HEIGHT * 0.69,
+                              width=int(WIDTH * 0.25),
+                              height=int(HEIGHT * 0.05),
+                              limit=(WIDTH * 0.046875, 0)), change_lvl_image,
+                       ('2_20',)],
+                      [Button('Назад', WIDTH * 0.04427083, HEIGHT * 0.85,
                               width=int(0.321 * WIDTH),
                               height=int(0.063 * HEIGHT)), game_mode_screen,
                        (False,)],
@@ -918,7 +1047,8 @@ lvl_scrn_buttons_2 = [[Button('Уровень 1', WIDTH * 0.125, HEIGHT * 0.06,
                               height=int(0.063 * HEIGHT)), start_game,
                        (False,)]]
 
-rules_btn = [[Button('Назад', WIDTH * 0.33958, HEIGHT * 0.8), start_screen, (1,)]]
+rules_btn = [
+    [Button('Назад', WIDTH * 0.33958, HEIGHT * 0.8), start_screen, (1,)]]
 
 
 def main():
