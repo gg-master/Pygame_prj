@@ -28,7 +28,7 @@ TILE_FOR_PLAYERS = 16
 TILE_FOR_MOBS = 17
 
 
-def set_constans_from_settings(screen_surf):
+def set_constants_from_settings(screen_surf):
     global MAP_SIZE, OFFSET
     OFFSET = 40
 
@@ -482,7 +482,8 @@ class ConfirmWindow:
         self.header_text = header_text
         self.confirm_text = confirm_text
 
-        self.width, self.height = int(self.WIDTH / 2), int(self.HEIGHT / 2)
+        self.width, self.height = int(
+            0.187 * self.WIDTH), int(0.15 * self.HEIGHT)
 
         self.background = pygame.Surface((self.width, self.height))
         self.top = pygame.Surface((self.width, self.height / 6))
@@ -494,22 +495,24 @@ class ConfirmWindow:
         self.k1 = self.TS
         self.k2 = self.TS // 2
         self.k3 = self.TS // 3
-        self.cancel = Button('Отмена',
-                             x=self.WIDTH // 2 + self.width // 4 - (
-                                     self.WIDTH // 7),
-                             y=self.HEIGHT // 2 + self.height // 3,
-                             width=5 * self.k1 + self.k2,
-                             height=self.k1, size=self.k2)
-        self.exit_btn = Button('В главное меню',
-                               x=self.WIDTH // 2 - self.width // 4 - (
-                                       self.WIDTH // 7),
-                               y=self.HEIGHT // 2 + self.height // 3,
-                               width=5 * self.k1 + self.k2,
-                               height=self.k1, size=self.k2)
+        self.exit_btn = Button('В меню', self.game,
+                               int(self.WIDTH / 2 - 0.1 * self.WIDTH),
+                               int(self.HEIGHT / 2 + 0.15 * self.HEIGHT / 4),
+                               width=int(self.WIDTH * 0.1),
+                               height=int(self.HEIGHT * 0.03),
+                               size=20)
+        self.cancel = Button('Отмена', self.game,
+                             int(self.WIDTH / 2),
+                             int(self.HEIGHT / 2 + 0.15 * self.HEIGHT / 4),
+                             width=int(self.WIDTH * 0.1),
+                             height=int(self.HEIGHT * 0.03),
+                             size=20)
 
     def draw(self, win, mouse_pos=None):
-        font_head = pygame.font.SysFont("comicsans", self.k2)
-        font_conf = pygame.font.SysFont("comicsans", self.k2)
+        font_head = pygame.font.SysFont("comicsans",
+                                        round(0.015625 * self.WIDTH))
+        font_conf = pygame.font.SysFont("comicsans",
+                                        round(0.013 * self.WIDTH))
         header_text = font_head.render(self.header_text, True, (255, 255, 255))
         confirm_text = font_conf.render(self.confirm_text, True, (15, 15, 14))
         self.window_scr.blit(self.background, (0, 0))
@@ -542,8 +545,9 @@ class Button:
     Класс кнопки
     """
 
-    def __init__(self, text, x=0, y=0, width=616, height=68, size=40,
+    def __init__(self, text, game, x=0, y=0, width=616, height=68, size=40,
                  limit=(0, 0)):
+        self.game = game
         self.text = text
         self.x = x
         self.y = y
@@ -594,6 +598,7 @@ class Button:
         is_click = mouse_state[1][0]
         if not is_click:
             return
+        self.game.add_music_track('click')
         if (self.x + self.limit_x <= x1 <=
                 self.x + self.width - self.limit_x and
                 self.y <= y1 <= self.y + self.height):
@@ -651,11 +656,10 @@ class GameOverScreen:
                 points = player.count_points
                 killed_enemies = player.killed_enemies
                 self.log[c] = [points, killed_enemies]
-
         self.action_btn = Button('Продолжить' if self.isWin else "Повторить",
-                                 width=5 * self.k1 + self.k2,
+                                 self.game, width=5 * self.k1 + self.k2,
                                  height=self.k1, size=self.k2)
-        self.exit_btn = Button('В главное меню',
+        self.exit_btn = Button('В главное меню', self.game,
                                width=5 * self.k1 + self.k2,
                                height=self.k1, size=self.k2)
 
@@ -757,7 +761,7 @@ class GameOverScreen:
 
 class Game:
     def __init__(self, type_game, number_level, screen_surf):
-        set_constans_from_settings(screen_surf)
+        set_constants_from_settings(screen_surf)
 
         self.map = Map(number_level, MAP_SIZE)
         self.map_object = self.map.map
@@ -775,9 +779,8 @@ class Game:
         self.feedback = None
         self.pause_screen = PauseScreen(self, self.screen)
         self.pause_sc_timer = pygame.time.get_ticks()
-        self.isGameOver = False
+        self.is_pause = self.isGameOver = False
         self.isWin = None
-        self.is_pause = False
         self.exit_menue_w = None
         self.is_music_changed = [False, False]
 
@@ -845,7 +848,7 @@ class Game:
                 if events.key == pygame.K_p:
                     self.is_pause = not self.is_pause
                     self.exit_menue_w = None
-                if events.key == pygame.K_ESCAPE:
+                if events.key == pygame.K_ESCAPE and not self.isGameOver:
                     self.is_pause = True
                     self.exit_menue_w = ConfirmWindow(
                         'Выйти в меню?', 'Действительно выйти в меню?',

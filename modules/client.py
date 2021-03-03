@@ -10,6 +10,7 @@ pygame.mixer.init()
 pygame.mixer.set_num_channels(35)
 
 SOUND_DIR = 'data\\music\\'
+font_fps = pygame.font.SysFont("Arial", 18)
 
 
 class MusicPlayer:
@@ -107,6 +108,9 @@ class MusicPlayer:
             self.track_list[name] = pygame.mixer.Sound(
                 os.path.join(SOUND_DIR, self.all_music[name]))
             self.track_list[name].set_volume(self.volume_music / 2 / 100)
+
+        self.track_list['click'] = pygame.mixer.Sound('data/sounds/click.wav')
+        self.track_list['click'].set_volume(self.volume_effects / 100)
 
     def play_music(self, name):
         # Проигрываем музыку
@@ -292,12 +296,9 @@ class Client:
         return arr_state
 
 
-font = pygame.font.SysFont("Arial", 18)
-
-
 def update_fps(cl):
     fps = str(int(cl.get_fps()))
-    fps_text = font.render(fps, 1, pygame.Color("coral"))
+    fps_text = font_fps.render(fps, 1, pygame.Color("coral"))
     return fps_text
 
 
@@ -308,7 +309,6 @@ def main() -> None:
     client = Client(1, 1, screen)
     while running:
         screen.fill(pygame.Color('black'))
-
         if client.is_exit:
             print('Выход в меню')
             break
