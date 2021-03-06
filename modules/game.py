@@ -99,7 +99,7 @@ class BotManager:
 
         self.global_count_bots = sum(self.bot_comb)
         self.types_tanks = ['t1', 't2', 't3', 't4']
-        self.real_time_counter = [0, self.get_type()]
+        self.real_time_counter = [0, self.get_next_type()]
         self.visible_bots = 4 if self.player_count == 1 else 6
         # Устанавливаем клетки для спавна ботов
         self.free_tiles_for_spawn = self.game.TILES_FOR_MOBS
@@ -153,7 +153,7 @@ class BotManager:
         # Обновляем состояние всех ботов
         self.game.mobs_group.update(events)
 
-    def get_type(self):
+    def get_next_type(self):
         # Возвращает следующий тип бота
         for i in range(len(self.bot_comb)):
             if self.bot_comb[i]:
@@ -725,7 +725,7 @@ class GameOverScreen:
         self.draw_log(screen)
 
     def draw_log(self, screen):
-        """Отрисовка статистика"""
+        """Отрисовка статистики"""
         x, y = screen.get_width() // 4, 3 * self.TS + 30
         y_orig = (self.TS * 5 + (25 + self.TS) * 4) + self.TS // 2
         font = pygame.font.Font(None, self.k2 + 15)
