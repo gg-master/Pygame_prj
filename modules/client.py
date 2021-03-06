@@ -171,7 +171,7 @@ class MusicPlayer:
                                 self.active_sound[k_act_s].index(i)]
 
     def play_list(self, track_list):
-        # Произыраем звуки
+        # Проигрываем звуки
         for name_track in track_list:
             if isinstance(name_track, dict):
                 key = list(name_track.keys())[0]
