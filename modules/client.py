@@ -368,7 +368,7 @@ def main() -> None:
         client.render()
         screen.blit(update_fps(clock), (10, 0))
         if pygame.mouse.get_focused():
-            cursor.draw(screen)
+            client.cursor.draw(screen)
         pygame.display.flip()
         clock.tick(FPS)
     pygame.quit()
@@ -382,5 +382,4 @@ if __name__ == '__main__':
                     pygame.display.Info().current_h]
     background = pygame.Surface((WIDTH, HEIGHT))
     fullscreen = False
-    cursor = Cursor()
     main()
