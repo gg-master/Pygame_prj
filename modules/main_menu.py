@@ -791,10 +791,10 @@ def generate_rules():
     rules_back.fill((0, 0, 0))
     rules_back.set_alpha(200)
     # Шрифты
-    font_header = pg.font.SysFont('comicsans', 42)
-    font_little_header = pg.font.SysFont('comicsans', 36)
-    font_default = pg.font.SysFont('comicsans', 30)
-    font_little_default = pg.font.SysFont('comicsans', 26)
+    font_header = pg.font.SysFont('comicsans', round(WIDTH * 0.021875))
+    font_little_header = pg.font.SysFont('comicsans', round(WIDTH * 0.01875))
+    font_default = pg.font.SysFont('comicsans', round(WIDTH * 0.015625))
+    font_little_default = pg.font.SysFont('comicsans', round(WIDTH * 0.013541))
 
     # Заголовки
     header = font_header.render('Правила игры', True, (255, 255, 255))
