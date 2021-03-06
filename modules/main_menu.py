@@ -6,7 +6,7 @@ import time
 import json
 
 os.chdir('..')
-FPS = 240
+FPS = 60
 pg.init()
 display_info = pg.display.Info()
 

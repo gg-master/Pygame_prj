@@ -598,10 +598,10 @@ class Button:
         is_click = mouse_state[1][0]
         if not is_click:
             return
-        self.game.add_music_track('click')
         if (self.x + self.limit_x <= x1 <=
                 self.x + self.width - self.limit_x and
                 self.y <= y1 <= self.y + self.height):
+            self.game.add_music_track('click')
             return True
         else:
             return None
