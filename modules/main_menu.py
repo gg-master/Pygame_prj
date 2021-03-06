@@ -30,10 +30,13 @@ with open('settings/settings.json') as f:
 pg.mixer.music.set_volume(music_v)
 click_sound.set_volume(sound_v)
 
-# Подгруаем некоторые картинки
-SYSTEM_IMAGES = 'data\\system_image\\'
+# Настройка курсора мыши
+pg.mouse.set_visible(False)
+cursor = pg.image.load('data/system_image/cursor.png').convert_alpha()
+
+# Подгруажем некоторые картинки
 fon = pg.transform.scale(pg.image.load('data/system_image'
-                                       '/main_menu_bckgrnd.png'), (WIDTH,
+                                       '/main_menu_bckgrnd.png').convert_alpha(), (WIDTH,
                                                                    HEIGHT))
 st_screen = pg.Surface(screen.get_size())
 bg_screen = pg.Surface(screen.get_size())
@@ -49,7 +52,7 @@ border = pg.transform.scale(pg.image.load('data/system_image/'
                                 round(WIDTH * 0.390625),
                                 round(HEIGHT * 0.6944444)))
 # Загружаем плашку "Tanks Battle"
-tanks_battle = pg.image.load('data/system_image/TanksBattle.png')
+tanks_battle = pg.image.load('data/system_image/TanksBattle.png').convert_alpha()
 tanks_battle_rect = tanks_battle.get_rect()
 
 # Создаём темный фильтр
@@ -119,7 +122,7 @@ def change_lvl_image(index):
     global lvl_image, map_index
     map_index = list(map(int, index.split('_')))
     lvl_image = pg.transform.scale(
-        pg.image.load(f'data/system_image/lvl_images/{index}.png'),
+        pg.image.load(f'data/system_image/lvl_images/{index}.png').convert_alpha(),
         (round(WIDTH * 0.32447916), round(HEIGHT * 0.56296)))
     return [choose_level_screen, map_index]
 
@@ -248,7 +251,7 @@ class SliderBar:
         self.slider.fill((84, 87, 87))
         # Загружаем прозрачный фон для блока
         self.bar = pg.transform.scale(pg.image.load('data/system_image/'
-                                                    'alpha_0.png'), (
+                                                    'alpha_0.png').convert_alpha(), (
                                           self.width,
                                           int(self.height + self.height / 25)))
         self.bar.blit(self.post, (self.width / 3, 0))
@@ -285,7 +288,7 @@ class SettingsWindow:
         self.width, self.height = WIDTH // 3, round(HEIGHT * 0.4)
         self.background = pg.transform.scale(
             pg.image.load('data/system_image/'
-                          'settings_wnd_bckgrnd.jpg'),
+                          'settings_wnd_bckgrnd.jpg').convert_alpha(),
             (self.width, self.height))
         # Созаём верхнюю плашку окна
         self.top = pg.Surface((self.width, self.height / 8))
@@ -596,10 +599,10 @@ class Button:
         # Загружаем изображение обыной кнопки и нажатой
         self.normal_image = pg.transform.scale(
             pg.image.load('data/system_image/'
-                          'button_normal.png'), (width, height))
+                          'button_normal.png').convert_alpha(), (width, height))
         self.hover_image = pg.transform.scale(
             pg.image.load('data/system_image/'
-                          'button_hovered.png'), (width, height))
+                          'button_hovered.png').convert_alpha(), (width, height))
         # Зададём размеры кнопки
         self.width, self.height = width, height
         # Создаем шрифт
@@ -607,14 +610,14 @@ class Button:
         # Создаём текст кнопки
         self.text = font.render(text, True, (255, 255, 255))
 
-    def draw(self, win):
+    def draw(self, win, flag=True):
         """Отрисовка кнопки"""
         # Получаем координаты мыши
         x1, y1 = pg.mouse.get_pos()
         # если координаты мыши входит в границы кнопки, то меняем изображение
         # кнопки на новое, иначе ставим обычное
-        if self.x + self.limit_x <= x1 <= self.x + self.width - self.limit_x \
-                and self.y <= y1 <= self.y + self.height:
+        if flag and self.x + self.limit_x <= x1 <= self.x + self.width -\
+                self.limit_x and self.y <= y1 <= self.y + self.height:
             win.blit(self.hover_image, (self.x, self.y))
             win.blit(self.text,
                      (self.x + self.width / 2 - self.text.get_width() / 2,
@@ -655,7 +658,7 @@ def choose_level_screen(typ):
             lvl_image = pg.transform.scale(pg.image.load('data'
                                                          '/system_image'
                                                          '/lvl_images'
-                                                         '/1_1.png'),
+                                                         '/1_1.png').convert_alpha(),
                                            (round(WIDTH * 0.32447916),
                                             round(HEIGHT * 0.56296)))
             map_index = (1, 1)
@@ -664,7 +667,7 @@ def choose_level_screen(typ):
             lvl_image = pg.transform.scale(pg.image.load('data'
                                                          '/system_image'
                                                          '/lvl_images'
-                                                         '/2_1.png'),
+                                                         '/2_1.png').convert_alpha(),
                                            (round(WIDTH * 0.32447916),
                                             round(HEIGHT * 0.56296)))
             map_index = (2, 1)
@@ -699,6 +702,7 @@ def choose_level_screen(typ):
                                                round(HEIGHT * 0.05),
                                                round(WIDTH * 0.390625),
                                                round(HEIGHT * 0.6944444)), 6)
+        st_screen.blit(cursor, pg.mouse.get_pos())
         screen.blit(st_screen, (0, 0))
         pg.display.flip()
         clock.tick(FPS)
@@ -729,6 +733,7 @@ def game_mode_screen():
                        (WIDTH / 2 - tanks_battle_rect.width / 2,
                         HEIGHT * 0.074))
         [i[0].draw(st_screen) for i in game_mode_buttons]
+        st_screen.blit(cursor, pg.mouse.get_pos())
         screen.blit(st_screen, (0, 0))
         pg.display.flip()
         clock.tick(FPS)
@@ -1031,6 +1036,7 @@ def rules_screen():
         st_screen.blit(bck_dark, (0, 0))
         st_screen.blit(rls_screen, (WIDTH * 0.05, HEIGHT * 0.05))
         [i[0].draw(st_screen) for i in rules_btn]
+        st_screen.blit(cursor, pg.mouse.get_pos())
         screen.blit(st_screen, (0, 0))
         pg.display.flip()
         clock.tick(FPS)
@@ -1057,18 +1063,24 @@ def start_screen(is_first):
     first_show() if is_first == 2 else None
     run = True
     while run:
+        st_screen.fill((0, 0, 0))
+        st_screen.blit(bg_screen, (0, 0))
+        st_screen.blit(tanks_battle,
+                       (WIDTH / 2 - tanks_battle_rect.width / 2,
+                        HEIGHT * 0.074))
         # Цикл обработки событий
         if pause:
+            [i[0].draw(st_screen, flag=False) for i in main_menu_buttons]
             # Если стоит паузка, значит открыто одно из окон
             if not bck_is_drk:
-                # Накадываем темный фильтр
-                screen.blit(bck_dark, (0, 0))
+                # Накладываем темный фильтр
+                st_screen.blit(bck_dark, (0, 0))
                 bck_is_drk = True
             # Проверка на то, какое окно открыто
             if exit_wnd_f:
-                exit_window.draw(screen)
+                exit_window.draw(st_screen)
             if settings_wnd_f:
-                setting_window.draw(screen)
+                setting_window.draw(st_screen)
             for event in pg.event.get():
                 if event.type == pg.QUIT:
                     terminate()
@@ -1095,12 +1107,14 @@ def start_screen(is_first):
                 if pg.mouse.get_pressed()[0]:
                     setting_window.music_bar.click(pg.mouse.get_pos())
                     setting_window.effects_bar.click(pg.mouse.get_pos())
-                [(i.draw(screen)) for i in setting_window.line_edits_arr]
-            # ОТрисовка кнопок в зависимости от окна
+                [(i.draw(st_screen)) for i in setting_window.line_edits_arr]
+            # Отрисовка кнопок в зависимости от окна
             if exit_wnd_f:
-                [i[0].draw(screen) for i in close_win_buttons]
+                [i[0].draw(st_screen) for i in close_win_buttons]
             if settings_wnd_f:
-                [i[0].draw(screen) for i in settings_wnd_btns]
+                [i[0].draw(st_screen) for i in settings_wnd_btns]
+            st_screen.blit(cursor, pg.mouse.get_pos())
+            screen.blit(st_screen, (0, 0))
             pg.display.flip()
             clock.tick(FPS)
             continue
@@ -1118,12 +1132,8 @@ def start_screen(is_first):
                             return x
                     pg.time.delay(1)
         # Отрисовка главного меню
-        st_screen.fill((0, 0, 0))
-        st_screen.blit(bg_screen, (0, 0))
-        st_screen.blit(tanks_battle,
-                       (WIDTH / 2 - tanks_battle_rect.width / 2,
-                        HEIGHT * 0.074))
         [i[0].draw(st_screen) for i in main_menu_buttons]
+        st_screen.blit(cursor, pg.mouse.get_pos())
         screen.blit(st_screen, (0, 0))
         pg.display.flip()
         clock.tick(FPS)
