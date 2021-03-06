@@ -1,6 +1,6 @@
 import os
 import pygame as pg
-from client import Client, update_fps
+from client import Client, update_fps, Cursor
 import sys
 import time
 import json
@@ -134,6 +134,8 @@ def start_game():
         # Цикл обработки событий
         screen.fill(pg.Color('black'))
         if client.is_exit:
+            client.cursor.set_visible(False)
+            pg.mouse.set_visible(True)
             return [play_music]
         for event in pg.event.get():
             if event.type == pg.QUIT:
@@ -142,6 +144,8 @@ def start_game():
         client.update()
         client.render()
         screen.blit(update_fps(clock), (10, 0))
+        if pg.mouse.get_focused():
+            client.cursor.draw(screen)
         pg.display.flip()
         clock.tick(FPS)
     pg.quit()

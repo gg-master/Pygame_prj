@@ -13,6 +13,30 @@ SOUND_DIR = 'data\\music\\'
 font_fps = pygame.font.SysFont("Arial", 18)
 
 
+class Cursor:
+    def __init__(self):
+        pygame.mouse.set_visible(False)
+        # Загрузка изображения курсора
+        if os.getcwd().split('\\')[-1] == 'modules':
+            os.chdir('..')
+        self.image = load_image('system_image/wot_arrow.png')
+        # Флаги, для скрытия и отображения курсора.
+        self.visible = True
+        self.was_hide = False
+
+    def set_visible(self, flag):
+        self.visible = flag
+        if not self.visible:
+            self.image.set_alpha(0)
+            self.was_hide = True
+        elif self.visible and self.was_hide:
+            self.image.set_alpha(255)
+            self.was_hide = False
+
+    def draw(self, screen_surf):
+        screen_surf.blit(self.image, pygame.mouse.get_pos())
+
+
 class MusicPlayer:
     """
         Класс, отвечающий за загрузку и воспроизведение игровой музыки
@@ -222,7 +246,8 @@ class Client:
     """
 
     def __init__(self, type_game, number_level, screen_surf):
-        pygame.mouse.set_visible(False)
+        self.cursor = Cursor()
+        self.cursor.set_visible(False)
         self.settings = load_settings()
         self.pl_settings = self.settings['player_settings']
         self.type_game = type_game
@@ -257,7 +282,7 @@ class Client:
         if self.game.feedback is not None:
             feedback = self.game.feedback
             if feedback in ['continue', 'restart']:
-                pygame.mouse.set_visible(False)
+                self.cursor.set_visible(False)
                 self.number_level += 1 if feedback == 'continue' else 0
                 level = self.game.level if feedback == 'restart' \
                     else self.number_level
@@ -268,12 +293,12 @@ class Client:
             elif feedback == 'exit':
                 self.is_exit = True
                 self.music_player.stop_all()
-                pygame.mouse.set_visible(True)
+                self.cursor.set_visible(True)
                 return
             elif feedback == 'mouse_visible_true':
-                pygame.mouse.set_visible(True)
+                self.cursor.set_visible(True)
             elif feedback == 'mouse_visible_false':
-                pygame.mouse.set_visible(False)
+                self.cursor.set_visible(False)
         # Узаем позицию мыши и состояние клавиш клавиатуры
         mouse_pos = pygame.mouse.get_pos()
         keystate = self.get_key_state()
@@ -342,6 +367,8 @@ def main() -> None:
         client.update()
         client.render()
         screen.blit(update_fps(clock), (10, 0))
+        if pygame.mouse.get_focused():
+            cursor.draw(screen)
         pygame.display.flip()
         clock.tick(FPS)
     pygame.quit()
@@ -355,4 +382,5 @@ if __name__ == '__main__':
                     pygame.display.Info().current_h]
     background = pygame.Surface((WIDTH, HEIGHT))
     fullscreen = False
+    cursor = Cursor()
     main()
