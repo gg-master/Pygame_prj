@@ -573,7 +573,7 @@ class Button:
         self.normal_image = self.hover_image = None
         self.load_img()
         font = pygame.font.SysFont("comicsans", self.size)
-        self.text = font.render(self.text, True, (255, 255, 255))
+        self.text_render = font.render(self.text, True, (255, 255, 255))
 
     def set_text(self, text):
         self.text = text
@@ -597,15 +597,16 @@ class Button:
         if self.x + self.limit_x <= x1 <= self.x + self.width - self.limit_x \
                 and self.y <= y1 <= self.y + self.height:
             win.blit(self.hover_image, (self.x, self.y))
-            win.blit(self.text, (self.x + self.width / 2 -
-                                 self.text.get_width() / 2,
-                                 self.y + self.height / 2 -
-                                 self.text.get_height() / 1.65))
+            win.blit(self.text_render, (self.x + self.width / 2 -
+                                        self.text_render.get_width() / 2,
+                                        self.y + self.height / 2 -
+                                        self.text_render.get_height() / 1.65))
         else:
             win.blit(self.normal_image, (self.x, self.y))
-            win.blit(self.text, (
-                self.x + self.width / 2 - self.text.get_width() / 2,
-                self.y + self.height / 2 - self.text.get_height() / 1.9))
+            win.blit(self.text_render, (
+                self.x + self.width / 2 - self.text_render.get_width() / 2,
+                self.y + self.height / 2 -
+                self.text_render.get_height() / 1.9))
 
     def click(self, mouse_state):
         # Обработка клика (если координаты мышки над нашей
@@ -866,7 +867,7 @@ class Game:
             # Если нажали кнопку паузы, то необходимо
             # остановить обновление объектов игры
             if events.type == pygame.KEYDOWN:
-                if events.key == pygame.K_p:
+                if events.key == pygame.K_p and not self.isGameOver:
                     self.is_pause = not self.is_pause
                     self.exit_menue_w = None
                     self.feedback = 'mouse_visible_true' if \
