@@ -350,7 +350,20 @@ class Menu(pygame.sprite.Sprite):
         self.is_two_pl = True if self.game.player2 is not None else False
 
         self.image = pygame.Surface((self.rect.width, self.rect.height),
-                                    pygame.SRCALPHA, 32)
+                                    pygame.SRCALPHA, 32).convert_alpha()
+        # Создание большинства шрифтов и рендер основного текста.
+        self.font = pygame.font.Font(self.text_font, int(self.m3))
+        self.f_nick = pygame.font.Font(self.text_font, int(self.m3 / 1.3))
+        # Узнаем ники игроков
+        self.p1_nick = self.f_nick.render(
+            f"{self.game.pl_sett['first_player_nick']}",
+            True, pygame.Color('black'))
+        self.p2_nick = self.f_nick.render(
+            f"{self.game.pl_sett['second_player_nick']}",
+            True, pygame.Color('black'))
+
+        self.level_text = self.font.render(
+            f"{self.game.level}", True, pygame.Color('black'))
 
     def load_image(self, name, m):
         # Загрузка изображений менюшек
@@ -379,26 +392,17 @@ class Menu(pygame.sprite.Sprite):
         # Отрисовка информации об игроках и номер уровня
         x = 0
         y = self.rect.height // 2
-        font = pygame.font.Font(self.text_font, int(self.m3))
-        f_nick = pygame.font.Font(self.text_font, int(self.m3 / 1.3))
+
         # Узнаем количество жизней у игроков
-        p1_lives = font.render(f"{self.game.player1.lives}", True,
-                               pygame.Color('black'))
+        p1_lives = self.font.render(f"{self.game.player1.lives}", True,
+                                    pygame.Color('black'))
 
-        p2_lives = font.render(f"{self.game.player2.lives}", True,
-                               pygame.Color('black')) \
+        p2_lives = self.font.render(f"{self.game.player2.lives}", True,
+                                    pygame.Color('black')) \
             if self.is_two_pl else None
-        # Узнаем ники игроков
-        p1_nick = f_nick.render(f"{self.game.pl_sett['first_player_nick']}",
-                                True, pygame.Color('black'))
-        p2_nick = f_nick.render(f"{self.game.pl_sett['second_player_nick']}",
-                                True, pygame.Color('black'))
-
-        level_text = font.render(f"{self.game.level}", True,
-                                 pygame.Color('black'))
         # Отрисовка ника игрока
-        p_n_rect = p1_nick.get_rect()
-        self.image.blit(p1_nick, (x, y, p_n_rect.width, p_n_rect.height))
+        p_n_rect = self.p1_nick.get_rect()
+        self.image.blit(self.p1_nick, (x, y, p_n_rect.width, p_n_rect.height))
         # Отрисовка мини-танчика игрока
         x, y = 0, y + p_n_rect.height + 6
         p_rc = self.p.get_rect()
@@ -412,8 +416,9 @@ class Menu(pygame.sprite.Sprite):
         if self.is_two_pl:
             x, y = 0, y + pl_lv.height + 10
             # Отрисовка ника второго игрока
-            p_n_rect = p2_nick.get_rect()
-            self.image.blit(p2_nick, (x, y, p_n_rect.width, p_n_rect.height))
+            p_n_rect = self.p2_nick.get_rect()
+            self.image.blit(
+                self.p2_nick, (x, y, p_n_rect.width, p_n_rect.height))
             # Отрисовка мини-танчика игрока
             x, y = 0, y + p_n_rect.height + 6
             p_rc = self.p.get_rect()
@@ -429,8 +434,9 @@ class Menu(pygame.sprite.Sprite):
         self.image.blit(self.flag, (x, y, fl_rc.width, fl_rc.height))
         # Отрисовка номера уровня
         x, y = x + fl_rc.width // 2, y + fl_rc.height // 1.5
-        lev_rect = level_text.get_rect()
-        self.image.blit(level_text, (x, y, lev_rect.width, lev_rect.height))
+        lev_rect = self.level_text.get_rect()
+        self.image.blit(
+            self.level_text, (x, y, lev_rect.width, lev_rect.height))
 
     def update(self, *args):
         # Обновление окна меню
@@ -449,7 +455,7 @@ class PauseScreen:
         self.game = game
         self.pscreen = pygame.Surface((screen.get_rect().w,
                                        screen.get_rect().h),
-                                      pygame.SRCALPHA, 32)
+                                      pygame.SRCALPHA, 32).convert()
         self.text_timer = pygame.time.get_ticks()
         font = pygame.font.Font(None, 50)
         self.text = font.render('PAUSE', False, (255, 255, 255, 255))
@@ -485,11 +491,24 @@ class ConfirmWindow:
         self.width, self.height = int(
             0.187 * self.WIDTH), int(0.15 * self.HEIGHT)
 
-        self.background = pygame.Surface((self.width, self.height))
-        self.top = pygame.Surface((self.width, self.height / 6))
+        self.background = pygame.Surface((self.width, self.height)
+                                         ).convert_alpha()
+        self.top = pygame.Surface((self.width, self.height / 6)
+                                  ).convert_alpha()
+
         self.top.fill((70, 70, 68))
         self.background.fill((147, 145, 142))
-        self.window_scr = pygame.Surface((self.width, self.height))
+        self.window_scr = pygame.Surface((self.width, self.height)
+                                         ).convert_alpha()
+
+        font_head = pygame.font.SysFont("comicsans",
+                                        round(0.015625 * self.WIDTH))
+        font_conf = pygame.font.SysFont("comicsans",
+                                        round(0.013 * self.WIDTH))
+        self.header_text = font_head.render(self.header_text, True,
+                                            (255, 255, 255))
+        self.confirm_text = font_conf.render(self.confirm_text, True,
+                                             (15, 15, 14))
 
         self.TS = self.game.TILE_SIZE
         self.k1 = self.TS
@@ -509,18 +528,14 @@ class ConfirmWindow:
                              size=20)
 
     def draw(self, win, mouse_pos=None):
-        font_head = pygame.font.SysFont("comicsans",
-                                        round(0.015625 * self.WIDTH))
-        font_conf = pygame.font.SysFont("comicsans",
-                                        round(0.013 * self.WIDTH))
-        header_text = font_head.render(self.header_text, True, (255, 255, 255))
-        confirm_text = font_conf.render(self.confirm_text, True, (15, 15, 14))
         self.window_scr.blit(self.background, (0, 0))
         self.window_scr.blit(self.top, (0, 0))
-        self.window_scr.blit(header_text, (
-            (self.width - header_text.get_width()) / 2, self.height * 0.03))
-        self.window_scr.blit(confirm_text, (
-            (self.width - confirm_text.get_width()) / 2, self.height / 4.5))
+        self.window_scr.blit(self.header_text, (
+            (self.width - self.header_text.get_width()) / 2,
+            self.height * 0.03))
+        self.window_scr.blit(self.confirm_text, (
+            (self.width - self.confirm_text.get_width()) / 2,
+            self.height / 4.5))
         pygame.draw.line(self.window_scr, (57, 59, 61),
                          (0, self.height * 0.16),
                          (self.width, self.height * 0.16), 3)
@@ -557,6 +572,8 @@ class Button:
         self.size = size
         self.normal_image = self.hover_image = None
         self.load_img()
+        font = pygame.font.SysFont("comicsans", self.size)
+        self.text = font.render(self.text, True, (255, 255, 255))
 
     def set_text(self, text):
         self.text = text
@@ -577,19 +594,18 @@ class Button:
     def draw(self, win, mouse_pos):
         x1, y1 = mouse_pos
         # Узнаем позицию и отталкиваясь от этого реагируем как либо на это
-        font = pygame.font.SysFont("comicsans", self.size)
-        text = font.render(self.text, True, (255, 255, 255))
         if self.x + self.limit_x <= x1 <= self.x + self.width - self.limit_x \
                 and self.y <= y1 <= self.y + self.height:
             win.blit(self.hover_image, (self.x, self.y))
-            win.blit(text, (self.x + self.width / 2 - text.get_width() / 2,
-                            self.y + self.height / 2 -
-                            text.get_height() / 1.65))
+            win.blit(self.text, (self.x + self.width / 2 -
+                                 self.text.get_width() / 2,
+                                 self.y + self.height / 2 -
+                                 self.text.get_height() / 1.65))
         else:
             win.blit(self.normal_image, (self.x, self.y))
-            win.blit(text, (self.x + self.width / 2 - text.get_width() / 2,
-                            self.y + self.height / 2 -
-                            text.get_height() / 1.9))
+            win.blit(self.text, (
+                self.x + self.width / 2 - self.text.get_width() / 2,
+                self.y + self.height / 2 - self.text.get_height() / 1.9))
 
     def click(self, mouse_state):
         # Обработка клика (если координаты мышки над нашей
@@ -624,7 +640,7 @@ class GameOverScreen:
         self.isWin = self.game.isWin
         self.screen = pygame.Surface((screen.get_rect().w,
                                       screen.get_rect().h),
-                                     pygame.SRCALPHA, 32)
+                                     pygame.SRCALPHA, 32).convert_alpha()
         self.screen.fill((0, 0, 0))
         self.screen.set_alpha(0)
         self.max_alpha_screen = 215
@@ -646,6 +662,15 @@ class GameOverScreen:
 
         self.log = {}
         self.load_log()
+
+        font = pygame.font.Font(None, self.k1)
+        self.font_log = pygame.font.Font(None, self.k2 + 15)
+        self.rez_text = font.render('YOU WON' if self.isWin else "YOU LOSE",
+                                    False, pygame.Color('red'))
+        self.level = font.render(f"STAGE {self.game.level}",
+                                 False, pygame.Color('orange'))
+        self.p1_nick = font.render(self.p1_nick, False, pygame.Color('yellow'))
+        self.p2_nick = font.render(self.p2_nick, False, pygame.Color('green'))
 
     def load_log(self):
         """Загружает информацию о количестве убитых игроками ботов
@@ -687,25 +712,19 @@ class GameOverScreen:
         screen.blit(self.screen, (0, 0))
         if self.screen.get_alpha() < self.max_alpha_screen:
             return
-        font = pygame.font.Font(None, self.k1)
-        rez_text = font.render('YOU WON' if self.isWin else "YOU LOSE",
-                               False, pygame.Color('red'))
-        level = font.render(f"STAGE {self.game.level}",
-                            False, pygame.Color('orange'))
-        p1_nick = font.render(self.p1_nick, False, pygame.Color('yellow'))
-
-        screen.blit(rez_text, (screen.get_width() // 2 -
-                               rez_text.get_width() // 2, self.TS - 10))
-        screen.blit(level, (screen.get_width() // 2 -
-                            level.get_width() // 2, 2 * self.TS))
-        screen.blit(p1_nick, (screen.get_width() // 4 -
-                              p1_nick.get_width() // 2, 2 * self.TS))
-
+        screen.blit(self.rez_text, (
+            screen.get_width() // 2 - self.rez_text.get_width() // 2,
+            self.TS - 10))
+        screen.blit(self.level, (
+            screen.get_width() // 2 - self.level.get_width() // 2,
+            2 * self.TS))
+        screen.blit(self.p1_nick, (
+            screen.get_width() // 4 - self.p1_nick.get_width() // 2,
+            2 * self.TS))
         if self.game.count_players == 2:
-            p2_nick = font.render(self.p2_nick, False,
-                                  pygame.Color('green'))
-            screen.blit(p2_nick, (screen.get_width() * 3 // 4 -
-                                  p2_nick.get_width() // 2, 2 * self.TS))
+            screen.blit(self.p2_nick, (
+                screen.get_width() * 3 // 4 - self.p2_nick.get_width() // 2,
+                2 * self.TS))
 
         for i in range(len(self.tanks_img)):
             screen.blit(self.tanks_img[i],
@@ -729,23 +748,24 @@ class GameOverScreen:
         """Отрисовка статистики"""
         x, y = screen.get_width() // 4, 3 * self.TS + 30
         y_orig = (self.TS * 5 + (25 + self.TS) * 4) + self.TS // 2
-        font = pygame.font.Font(None, self.k2 + 15)
+
         for k in self.log.keys():
             data = self.log[k]
             if k != 1:
                 x *= 3
-            text = font.render(str(data[0]), False, pygame.Color('white'))
+            text = self.font_log.render(
+                str(data[0]), False, pygame.Color('white'))
             screen.blit(text, (x - text.get_width() // 2, y))
             for t_t in data[1].keys():
                 num_t = int(t_t[-1])
                 y1 = (self.TS * 5 + (25 + self.TS) * (
                         num_t - 1)) + self.TS // 2
-                score_text = font.render(f'Очки: {data[1][t_t][1]} - '
-                                         f'Кол-во: {data[1][t_t][0]}', False,
-                                         pygame.Color('white'))
+                score_text = self.font_log.render(f'Очки: {data[1][t_t][1]} - '
+                                                  f'Кол-во: {data[1][t_t][0]}',
+                                                  False, pygame.Color('white'))
                 screen.blit(score_text, (x - score_text.get_width() // 2,
                                          y1 - score_text.get_height() // 2))
-        result = font.render(
+        result = self.font_log.render(
             f'TOTAL - {sum([i[0] for i in self.log.values()])}',
             False, pygame.Color('white'))
         screen.blit(result, (screen.get_width() // 2 - result.get_width() // 2,
