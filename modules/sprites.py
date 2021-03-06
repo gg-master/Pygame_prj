@@ -138,7 +138,7 @@ class Player(pygame.sprite.Sprite):
         elif self.type_tanks == 't3':
             self.bullet_speed = 7
 
-    def load_tanks_image(self):
+    def load_tanks_image(self, reload_mask=True):
         """
         Загрузка избражения танка
         В зависимости от:
@@ -158,10 +158,11 @@ class Player(pygame.sprite.Sprite):
                                                     self.TILE_SIZE // 7,
                                                     self.TILE_SIZE -
                                                     self.TILE_SIZE // 7))
-        s = pygame.Surface((self.image.get_rect().width,
-                            self.image.get_rect().height), pygame.SRCALPHA)
-        s.fill(pygame.color.Color('black'))
-        self.mask = pygame.mask.from_surface(s)
+        if reload_mask:
+            s = pygame.Surface((self.image.get_rect().width,
+                                self.image.get_rect().height), pygame.SRCALPHA)
+            s.fill(pygame.color.Color('black'))
+            self.mask = pygame.mask.from_surface(s)
 
     def kill(self):
         # Если у игрока не включен щит
@@ -217,8 +218,9 @@ class Player(pygame.sprite.Sprite):
             self.turning_turret_timer = pygame.time.get_ticks()
 
         # Устанавливаем сторону и загружаем изображение танка для новой стороны
+        change_side = False if self.side == side else True
         self.side = side
-        self.load_tanks_image()
+        self.load_tanks_image(reload_mask=change_side)
         # Передвигаем танк в заданном направлении
         self.rect = self.rect.move(speed[0], speed[1])
         # Проверяем по маске пересекаемся ли мы с какимто физическим
@@ -574,6 +576,7 @@ class Bot(pygame.sprite.Sprite):
         self.side = 't'
         self.prev_side = 't'
         self.available_side = ['t', 'l', 'b', 'r']
+        self.anti_side = {'r': 'l', 'l': 'r', 't': 'b', 'b': 't'}
         # Этот список содержит "набор сторон" в которые мы могли или не могли
         # Проехать. Если можем, то False, иначе True.
         self.sides_flags = [False, False, False, False]
@@ -725,7 +728,7 @@ class Bot(pygame.sprite.Sprite):
                 f"{int(self.move_trigger)}"
         return name
 
-    def load_tanks_image(self):
+    def load_tanks_image(self, reload_mask=True):
         """
         Загрузка изображения танка
         :return: None
@@ -744,10 +747,11 @@ class Bot(pygame.sprite.Sprite):
                                                     self.TILE_SIZE // 8,
                                                     self.TILE_SIZE -
                                                     self.TILE_SIZE // 8))
-        s = pygame.Surface((self.image.get_rect().width,
-                            self.image.get_rect().height), pygame.SRCALPHA)
-        s.fill(pygame.color.Color('black'))
-        self.mask = pygame.mask.from_surface(s)
+        if reload_mask:
+            s = pygame.Surface((self.image.get_rect().width,
+                                self.image.get_rect().height), pygame.SRCALPHA)
+            s.fill(pygame.color.Color('black'))
+            self.mask = pygame.mask.from_surface(s)
 
     def set_speedxy(self):
         """
@@ -786,7 +790,6 @@ class Bot(pygame.sprite.Sprite):
         :return: None
         """
         # Обозначаем противоположные стороны для каждой стороны
-        anti_side = {"r": 'l', 'l': 'r', 't': 'b', 'b': 't'}
         if custom:
             if random() > 0.5:
                 self.side = self.get_side(direction=1)
@@ -795,10 +798,10 @@ class Bot(pygame.sprite.Sprite):
             return
         # В зависимости от значения рандома мы изменяем направление
         if random() < 0.20:  # 0.25
-            self.side = anti_side[self.side]
+            self.side = self.anti_side[self.side]
         else:
             if random() < 0.5:  # 0.5
-                self.side = anti_side[self.side]
+                self.side = self.anti_side[self.side]
             else:
                 if random() > 0.5:
                     self.side = self.get_side(direction=1)
@@ -813,8 +816,9 @@ class Bot(pygame.sprite.Sprite):
         :return None
         :returns False, collide_obj or None
         """
+        change_side = False if self.side == side else True
         self.side = side
-        self.load_tanks_image()
+        self.load_tanks_image(reload_mask=change_side)
         self.rect = self.rect.move(speed[0], speed[1])
         c = pygame.sprite.spritecollide(self, self.game.map_group, False,
                                         pygame.sprite.collide_mask)
@@ -885,7 +889,6 @@ class Bot(pygame.sprite.Sprite):
         :return: True: Если бот может проехать в данном направлении
         :return: False: Если бот не может проехать в данном направлении
         """
-        anti_side = {'r': 'l', 'l': 'r', 't': 'b', 'b': 't'}
         # Проверка предпочитаемой стороны
         if self.check_pos_by_emptbot(pref_side):
             # Если мы ранее не могли проехать в данную сторону, то смотрим
@@ -899,14 +902,14 @@ class Bot(pygame.sprite.Sprite):
                     # Тут возможно кроются баги. Нужно тестить
                     if self.side == pref_side:
                         return False
-                    if self.side == anti_side[self.prev_side]:
+                    if self.side == self.anti_side[self.prev_side]:
                         self.side = pref_side
                         return True
                     # print(self.side, self.prev_side, pref_side)
                     # Обработка общего случая
                     s = self.side
                     self.side = self.prev_side
-                    self.prev_side = anti_side[s]
+                    self.prev_side = self.anti_side[s]
                     return False
             elif not self.sides_flags[self.available_side.index(pref_side)]:
                 return True
@@ -1098,25 +1101,24 @@ class Bot(pygame.sprite.Sprite):
         в движение бота
         :return: None
         """
-        anti_side = {'r': 'l', 'l': 'r', 't': 'b', 'b': 't'}
         if self.side == 'b':
-            if self.prev_side in [anti_side[self.side], 'b']:
+            if self.prev_side in [self.anti_side[self.side], 'b']:
                 self.side = 'l' if random() < 1 / 2 else 'r'
                 self.prev_side = 'b'
                 return
             if random() < 1 / 2:
-                self.side = anti_side[self.prev_side]
+                self.side = self.anti_side[self.prev_side]
                 self.prev_side = 'b'
                 return
             self.side = 't'
             return
         if self.side == 't':
-            if self.prev_side in [anti_side[self.side], 't']:
+            if self.prev_side in [self.anti_side[self.side], 't']:
                 self.side = 'l' if random() < 1 / 2 else 'r'
                 self.prev_side = 't'
                 return
             if random() < 1 / 2:
-                self.side = anti_side[self.prev_side]
+                self.side = self.anti_side[self.prev_side]
                 self.prev_side = 't'
                 return
             self.side = 'b'
