@@ -602,6 +602,7 @@ class Button:
                 self.x + self.width - self.limit_x and
                 self.y <= y1 <= self.y + self.height):
             self.game.add_music_track('click')
+            self.game.feedback = 'mouse_visible_false'
             return True
         else:
             return None
@@ -848,11 +849,19 @@ class Game:
                 if events.key == pygame.K_p:
                     self.is_pause = not self.is_pause
                     self.exit_menue_w = None
+                    self.feedback = 'mouse_visible_true' if \
+                        self.is_pause else 'mouse_visible_false'
                 if events.key == pygame.K_ESCAPE and not self.isGameOver:
-                    self.is_pause = True
-                    self.exit_menue_w = ConfirmWindow(
-                        'Выйти в меню?', 'Действительно выйти в меню?',
-                        self)
+                    if self.exit_menue_w is None:
+                        self.is_pause = True
+                        self.exit_menue_w = ConfirmWindow(
+                            'Выйти в меню?', 'Действительно выйти в меню?',
+                            self)
+                    else:
+                        self.is_pause = False
+                        self.exit_menue_w = None
+                    self.feedback = 'mouse_visible_true' if \
+                        self.is_pause else 'mouse_visible_false'
             return
         if not self.is_pause:
             # Если игра проиграна, то необходимо отрисовать окно проигрыша
@@ -925,6 +934,7 @@ class Game:
                     'change_music': 'won' if self.isWin else 'lost'})
             if self.isGameOver:
                 self.game_over_screen = GameOverScreen(self, self.screen)
+                self.feedback = 'mouse_visible_true'
 
     def set_feedback(self, name):
         self.feedback = name

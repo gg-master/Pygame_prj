@@ -222,6 +222,7 @@ class Client:
     """
 
     def __init__(self, type_game, number_level, screen_surf):
+        pygame.mouse.set_visible(False)
         self.settings = load_settings()
         self.pl_settings = self.settings['player_settings']
         self.type_game = type_game
@@ -256,6 +257,7 @@ class Client:
         if self.game.feedback is not None:
             feedback = self.game.feedback
             if feedback in ['continue', 'restart']:
+                pygame.mouse.set_visible(False)
                 self.number_level += 1 if feedback == 'continue' else 0
                 level = self.game.level if feedback == 'restart' \
                     else self.number_level
@@ -265,6 +267,13 @@ class Client:
                     self.game.set_players_data(pl_data)
             elif feedback == 'exit':
                 self.is_exit = True
+                self.music_player.stop_all()
+                pygame.mouse.set_visible(True)
+                return
+            elif feedback == 'mouse_visible_true':
+                pygame.mouse.set_visible(True)
+            elif feedback == 'mouse_visible_false':
+                pygame.mouse.set_visible(False)
         # Узаем позицию мыши и состояние клавиш клавиатуры
         mouse_pos = pygame.mouse.get_pos()
         keystate = self.get_key_state()
