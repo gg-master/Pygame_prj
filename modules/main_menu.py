@@ -36,8 +36,10 @@ cursor = pg.image.load('data/system_image/cursor.png').convert_alpha()
 
 # Подгруажем некоторые картинки
 fon = pg.transform.scale(pg.image.load('data/system_image'
-                                       '/main_menu_bckgrnd.png').convert_alpha(), (WIDTH,
-                                                                   HEIGHT))
+                                       '/main_menu_bckgrnd.'
+                                       'png').convert_alpha(),
+                         (WIDTH,
+                          HEIGHT))
 st_screen = pg.Surface(screen.get_size())
 bg_screen = pg.Surface(screen.get_size())
 bg_screen.blit(fon, (0, 0))
@@ -52,7 +54,8 @@ border = pg.transform.scale(pg.image.load('data/system_image/'
                                 round(WIDTH * 0.390625),
                                 round(HEIGHT * 0.6944444)))
 # Загружаем плашку "Tanks Battle"
-tanks_battle = pg.image.load('data/system_image/TanksBattle.png').convert_alpha()
+tanks_battle = pg.image.load(
+    'data/system_image/TanksBattle.png').convert_alpha()
 tanks_battle_rect = tanks_battle.get_rect()
 
 # Создаём темный фильтр
@@ -122,7 +125,8 @@ def change_lvl_image(index):
     global lvl_image, map_index
     map_index = list(map(int, index.split('_')))
     lvl_image = pg.transform.scale(
-        pg.image.load(f'data/system_image/lvl_images/{index}.png').convert_alpha(),
+        pg.image.load(
+            f'data/system_image/lvl_images/{index}.png').convert_alpha(),
         (round(WIDTH * 0.32447916), round(HEIGHT * 0.56296)))
     return [choose_level_screen, map_index]
 
@@ -251,7 +255,9 @@ class SliderBar:
         self.slider.fill((84, 87, 87))
         # Загружаем прозрачный фон для блока
         self.bar = pg.transform.scale(pg.image.load('data/system_image/'
-                                                    'alpha_0.png').convert_alpha(), (
+                                                    'alpha_0.'
+                                                    'png').convert_alpha(),
+                                      (
                                           self.width,
                                           int(self.height + self.height / 25)))
         self.bar.blit(self.post, (self.width / 3, 0))
@@ -533,8 +539,8 @@ class SettingsWindow:
             9].text
         data['player_settings']['shoot_btn_1'] = self.line_edits_arr[10].text
         data['player_settings']['shoot_btn_2'] = self.line_edits_arr[11].text
-        music_v, sound_v = self.music_bar.value / 100,\
-                           self.effects_bar.value / 100
+        music_v, sound_v = (self.music_bar.value / 100,
+                            self.effects_bar.value / 100)
         # Установка новых значений микшероов громкости
         pg.mixer.music.set_volume(music_v)
         click_sound.set_volume(sound_v)
@@ -599,10 +605,12 @@ class Button:
         # Загружаем изображение обыной кнопки и нажатой
         self.normal_image = pg.transform.scale(
             pg.image.load('data/system_image/'
-                          'button_normal.png').convert_alpha(), (width, height))
+                          'button_normal.png').convert_alpha(),
+            (width, height))
         self.hover_image = pg.transform.scale(
             pg.image.load('data/system_image/'
-                          'button_hovered.png').convert_alpha(), (width, height))
+                          'button_hovered.png').convert_alpha(),
+            (width, height))
         # Зададём размеры кнопки
         self.width, self.height = width, height
         # Создаем шрифт
@@ -616,7 +624,7 @@ class Button:
         x1, y1 = pg.mouse.get_pos()
         # если координаты мыши входит в границы кнопки, то меняем изображение
         # кнопки на новое, иначе ставим обычное
-        if flag and self.x + self.limit_x <= x1 <= self.x + self.width -\
+        if flag and self.x + self.limit_x <= x1 <= self.x + self.width - \
                 self.limit_x and self.y <= y1 <= self.y + self.height:
             win.blit(self.hover_image, (self.x, self.y))
             win.blit(self.text,
@@ -657,16 +665,16 @@ def choose_level_screen(typ):
         if (type(typ) == tuple and typ[0] == 1) or typ == 1:
             lvl_image = pg.transform.scale(pg.image.load('data'
                                                          '/system_image'
-                                                         '/lvl_images'
-                                                         '/1_1.png').convert_alpha(),
+                                                         '/lvl_images/1_1.p'
+                                                         'ng').convert_alpha(),
                                            (round(WIDTH * 0.32447916),
                                             round(HEIGHT * 0.56296)))
             map_index = (1, 1)
         else:
             lvl_image = pg.transform.scale(pg.image.load('data'
                                                          '/system_image'
-                                                         '/lvl_images'
-                                                         '/2_1.png').convert_alpha(),
+                                                         '/lvl_images/2_1.p'
+                                                         'ng').convert_alpha(),
                                            (round(WIDTH * 0.32447916),
                                             round(HEIGHT * 0.56296)))
             map_index = (2, 1)
