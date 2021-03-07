@@ -123,7 +123,9 @@ def change_pause():
 def change_lvl_image(index):
     """Изменение картинки уровня"""
     global lvl_image, map_index
+    print(index, 'index')
     map_index = list(map(int, index.split('_')))
+    print(map_index, 'ch')
     lvl_image = pg.transform.scale(
         pg.image.load(
             f'data/system_image/lvl_images/{index}.png').convert_alpha(),
@@ -659,10 +661,11 @@ def choose_level_screen(typ):
     """Меню выбора уровня"""
     global lvl_image, map_index, game_mode_f
     # Проерка на первое открытие окна
+    print(typ)
     if not game_mode_f:
         game_mode_f = True
         # Подграем нужную картинку в зависимости от типа игры
-        if (type(typ) == tuple and typ[0] == 1) or typ == 1:
+        if ((type(typ) == tuple or type(typ) == list) and typ[0] == 1) or typ == 1:
             lvl_image = pg.transform.scale(pg.image.load('data'
                                                          '/system_image'
                                                          '/lvl_images/1_1.p'
@@ -678,6 +681,7 @@ def choose_level_screen(typ):
                                            (round(WIDTH * 0.32447916),
                                             round(HEIGHT * 0.56296)))
             map_index = (2, 1)
+    print(map_index, 'mi')
     run = True
     # Цикл обработки событий
     while run:
@@ -686,7 +690,7 @@ def choose_level_screen(typ):
                 terminate()
             if event.type == pg.MOUSEBUTTONDOWN and event.button == 1:
                 # Вызываем кнопки в зависимости т типа игры
-                if (type(typ) == tuple and typ[0] == 1) or typ == 1:
+                if ((type(typ) == tuple or type(typ) == list) and typ[0] == 1) or typ == 1:
                     response = [btn.click(event.pos, act, arg)
                                 for btn, act, arg in lvl_scrn_buttons_1]
                 else:
