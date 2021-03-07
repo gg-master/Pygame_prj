@@ -1407,7 +1407,7 @@ class Wall(pygame.sprite.Sprite):
         elif self.id == 22:
             if max_s >= x >= max_s // 2 >= y >= 0:
                 self.reload_mask(18)
-            if 0 <= x <= half_s <= y <= max_s:
+            if 0 <= x <= max_s // 2 <= y <= max_s:
                 self.reload_mask(19)
         elif self.id == 23:
             if max_s >= x >= max_s // 2 and max_s // 2 <= y <= max_s:
