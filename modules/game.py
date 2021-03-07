@@ -658,6 +658,7 @@ class GameOverScreen:
         # Содание кнопок
         self.action_btn = self.exit_btn = None
         self.can_move = True
+        self.mouse_visible_flag = True
         self.show_timer = pygame.time.get_ticks()
         self.show_delay = 2000
 
@@ -713,6 +714,9 @@ class GameOverScreen:
         screen.blit(self.screen, (0, 0))
         if self.screen.get_alpha() < self.max_alpha_screen:
             return
+        if self.mouse_visible_flag:
+            self.game.set_feedback('mouse_visible_true')
+            self.mouse_visible_flag = False
         screen.blit(self.rez_text, (
             screen.get_width() // 2 - self.rez_text.get_width() // 2,
             self.TS - 10))
@@ -955,7 +959,6 @@ class Game:
                     'change_music': 'won' if self.isWin else 'lost'})
             if self.isGameOver:
                 self.game_over_screen = GameOverScreen(self, self.screen)
-                self.feedback = 'mouse_visible_true'
 
     def set_feedback(self, name):
         self.feedback = name
