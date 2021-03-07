@@ -1,11 +1,14 @@
 import os
 import pygame as pg
-from client import Client, update_fps, Cursor
+from client import Client, update_fps
 import sys
 import time
 import json
 
-os.chdir('..')
+os.chdir(getattr(sys, '_MEIPASS', os.path.dirname(os.path.abspath(__file__))))
+if os.getcwd().endswith('modules'):
+    os.chdir('..')
+
 FPS = 60
 pg.init()
 display_info = pg.display.Info()
