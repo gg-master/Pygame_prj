@@ -46,9 +46,9 @@ def set_constants_from_settings(screen_surf):
         k = sc_w / size
         MAP_SIZE = int(sc_w * k) if k < 1 else sc_w
     OFFSETX = max(
-        int(screen_surf.get_width() / 2 - ((MAP_SIZE // 13) * 3) / 2), OFFSET)
-    OFFSETX = max(int(screen_surf.get_height() / 2 - MAP_SIZE / 2), OFFSET)
-    print(OFFSET, (OFFSETX, OFFSETY))
+        int((screen_surf.get_width() / 2) - size / 2), OFFSET)
+    OFFSETY = max(int(screen_surf.get_height() / 2 - MAP_SIZE / 2), OFFSET)
+
 
 def convert_coords(x, tile_size):
     """Изменяем координаты в соответсвии со смещением"""
@@ -314,7 +314,7 @@ class Map:
         :return False eсли объект не пересек границу"""
         if rect.y < self.rect.y or rect.x < self.rect.x \
                 or rect.right >= self.rect.right - rect.w / 7.31 \
-                or rect.bottom >= self.rect.bottom - rect.h / 7.31:
+                or rect.bottom >= self.rect.bottom - rect.h / 6:
             return True
         return False
 
