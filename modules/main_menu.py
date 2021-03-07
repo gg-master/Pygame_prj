@@ -1,11 +1,15 @@
 import os
 import pygame as pg
-from client import Client, update_fps, Cursor
+from client import Client, update_fps
+from default_funcs import load_image
 import sys
 import time
 import json
 
-os.chdir('..')
+os.chdir(getattr(sys, '_MEIPASS', os.path.dirname(os.path.abspath(__file__))))
+if os.getcwd().endswith('modules'):
+    os.chdir('..')
+
 FPS = 60
 pg.init()
 display_info = pg.display.Info()
@@ -17,6 +21,7 @@ screen = pg.display.set_mode((WIDTH, HEIGHT))
 background = pg.Surface((WIDTH, HEIGHT))
 background.fill((0, 0, 0, 0))
 pg.display.set_caption('Tanks Battle')
+pg.display.set_icon(load_image('system_image/Tanks_Battle.png'))
 clock = pg.time.Clock()
 maps = ['']
 
