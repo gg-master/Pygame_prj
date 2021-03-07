@@ -662,7 +662,6 @@ def choose_level_screen(typ):
                                            (round(WIDTH * 0.32447916),
                                             round(HEIGHT * 0.56296)))
             map_index = (1, 1)
-            print('map_index:1', map_index)
         else:
             lvl_image = pg.transform.scale(pg.image.load('data'
                                                          '/system_image'
@@ -1060,6 +1059,7 @@ def play_music():
 def start_screen(is_first):
     """Главное окно меню"""
     global bck_is_drk
+    pg.mouse.set_visible(False)
     first_show() if is_first == 2 else None
     run = True
     while run:
@@ -1072,10 +1072,8 @@ def start_screen(is_first):
         if pause:
             [i[0].draw(st_screen, flag=False) for i in main_menu_buttons]
             # Если стоит паузка, значит открыто одно из окон
-            if not bck_is_drk:
-                # Накладываем темный фильтр
-                st_screen.blit(bck_dark, (0, 0))
-                bck_is_drk = True
+            # Накладываем темный фильтр
+            st_screen.blit(bck_dark, (0, 0))
             # Проверка на то, какое окно открыто
             if exit_wnd_f:
                 exit_window.draw(st_screen)
@@ -1430,7 +1428,6 @@ def main():
     running = True
     response = start_screen(2)
     while running:
-        print(response)
         if len(response) == 2:
             response = response[0](response[1])
         else:
