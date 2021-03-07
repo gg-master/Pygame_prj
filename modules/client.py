@@ -17,7 +17,7 @@ class Cursor:
     def __init__(self):
         pygame.mouse.set_visible(False)
         # Загрузка изображения курсора
-        if os.getcwd().split('\\')[-1] == 'modules':
+        if os.getcwd().endswith('modules'):
             os.chdir('..')
         self.image = load_image('system_image/wot_arrow.png')
         # Флаги, для скрытия и отображения курсора.
