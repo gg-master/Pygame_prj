@@ -22,14 +22,14 @@ MAPDIR = 'data\\maps\\'
 DIR_FOR_TANKS_IMG = 'tanks_texture\\'
 
 MAP_SIZE = 650
-OFFSET = 50
+OFFSET = OFFSETX = OFFSETY = 50
 
 TILE_FOR_PLAYERS = 16
 TILE_FOR_MOBS = 17
 
 
 def set_constants_from_settings(screen_surf):
-    global MAP_SIZE, OFFSET
+    global MAP_SIZE, OFFSET, OFFSETX, OFFSETY
     OFFSET = 40
 
     sc_w, sc_h = screen_surf.get_size()
@@ -40,16 +40,19 @@ def set_constants_from_settings(screen_surf):
         size = sc_h + menue_w
         k = sc_w / size
         MAP_SIZE = int(sc_h * k) if k < 1 else sc_h
-    if sc_h > sc_w:
+    else:
         menue_w = (sc_w / 13) * 3
         size = sc_w + menue_w
         k = sc_w / size
         MAP_SIZE = int(sc_w * k) if k < 1 else sc_w
-
+    OFFSETX = max(
+        int(screen_surf.get_width() / 2 - ((MAP_SIZE // 13) * 3) / 2), OFFSET)
+    OFFSETX = max(int(screen_surf.get_height() / 2 - MAP_SIZE / 2), OFFSET)
+    print(OFFSET, (OFFSETX, OFFSETY))
 
 def convert_coords(x, tile_size):
     """Изменяем координаты в соответсвии со смещением"""
-    return x[0] * tile_size + OFFSET, x[1] * tile_size + OFFSET, x[2]
+    return x[0] * tile_size + OFFSETX, x[1] * tile_size + OFFSETY, x[2]
 
 
 def get_random_map_number():
@@ -248,7 +251,7 @@ class Map:
         # уменьшить размер клетки в частости и координаты
         self.koeff = self.map.tilewidth / self.TILE_SIZE
         # Квадрат - границы карты
-        self.rect = pygame.rect.Rect((OFFSET, OFFSET),
+        self.rect = pygame.rect.Rect((OFFSETX, OFFSETY),
                                      (MAP_SIZE, MAP_SIZE))
         # Получаем все слои из обекта карты и
         # проверяем наличие самых необходимых
@@ -297,8 +300,8 @@ class Map:
                 image = self.get_tile_image(x, y, layer)
                 if image is not None:
                     sc.blit(image, (
-                        x * self.TILE_SIZE + OFFSET,
-                        y * self.TILE_SIZE + OFFSET))
+                        x * self.TILE_SIZE + OFFSETX,
+                        y * self.TILE_SIZE + OFFSETY))
 
     def check_(self, name):
         """Проверяет имеется ли слой в объекте карты"""
@@ -310,8 +313,8 @@ class Map:
         :return True если объект пересек границу
         :return False eсли объект не пересек границу"""
         if rect.y < self.rect.y or rect.x < self.rect.x \
-                or rect.right >= self.rect.right \
-                or rect.bottom >= self.rect.bottom:
+                or rect.right >= self.rect.right - rect.w / 7.31 \
+                or rect.bottom >= self.rect.bottom - rect.h / 7.31:
             return True
         return False
 
@@ -792,8 +795,8 @@ class Game:
         self.map = Map(number_level, MAP_SIZE)
         self.map_object = self.map.map
         self.TILE_SIZE = self.map.TILE_SIZE
-        self.MAP_SIZE = pygame.Rect(OFFSET, OFFSET,
-                                    MAP_SIZE + OFFSET, MAP_SIZE + OFFSET)
+        self.MAP_SIZE = pygame.Rect(OFFSETX, OFFSETY,
+                                    MAP_SIZE + OFFSETX, MAP_SIZE + OFFSETY)
         self.type_game = type_game
         self.real_level = number_level
         self.level = self.map.level
@@ -853,16 +856,16 @@ class Game:
         if not self.map.check_('walls'):
             return
         for i in self.map.get_objects('walls'):
-            x = (i.x / self.map.koeff) + OFFSET
-            y = (i.y / self.map.koeff) + OFFSET
+            x = (i.x / self.map.koeff) + OFFSETX
+            y = (i.y / self.map.koeff) + OFFSETY
             Wall(x, y, self.map.get_tile_id(i.gid),
                  self.TILE_SIZE, self)
 
     def create_eagle(self):
         # Создаем объект орла
         tile = self.map.get_objects('eagle')[0]
-        x = tile.x / self.map.koeff + OFFSET
-        y = tile.y / self.map.koeff + OFFSET
+        x = tile.x / self.map.koeff + OFFSETX
+        y = tile.y / self.map.koeff + OFFSETY
         return Eagle(self, x, y, self.TILE_SIZE)
 
     def update(self, events=None, keystate=None, mouse_state=None):
