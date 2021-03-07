@@ -3,7 +3,6 @@ import json
 import os
 import sys
 import pygame_gui
-from constants import *
 
 
 SETTINGS_PATH = 'settings/settings.json'
