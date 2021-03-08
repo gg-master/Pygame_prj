@@ -22,14 +22,14 @@ MAPDIR = 'data\\maps\\'
 DIR_FOR_TANKS_IMG = 'tanks_texture\\'
 
 MAP_SIZE = 650
-OFFSET = OFFSETX = OFFSETY = 50
+OFFSET = OFFSET_X = OFFSET_Y = 50
 
 TILE_FOR_PLAYERS = 16
 TILE_FOR_MOBS = 17
 
 
 def set_constants_from_settings(screen_surf):
-    global MAP_SIZE, OFFSET, OFFSETX, OFFSETY
+    global MAP_SIZE, OFFSET, OFFSET_X, OFFSET_Y
     OFFSET = 40
 
     sc_w, sc_h = screen_surf.get_size()
@@ -45,14 +45,14 @@ def set_constants_from_settings(screen_surf):
         size = sc_w + menue_w
         k = sc_w / size
         MAP_SIZE = int(sc_w * k) if k < 1 else sc_w
-    OFFSETX = max(
+    OFFSET_X = max(
         int((screen_surf.get_width() / 2) - size / 2), OFFSET)
-    OFFSETY = max(int(screen_surf.get_height() / 2 - MAP_SIZE / 2), OFFSET)
+    OFFSET_Y = max(int(screen_surf.get_height() / 2 - MAP_SIZE / 2), OFFSET)
 
 
 def convert_coords(x, tile_size):
     """Изменяем координаты в соответсвии со смещением"""
-    return x[0] * tile_size + OFFSETX, x[1] * tile_size + OFFSETY, x[2]
+    return x[0] * tile_size + OFFSET_X, x[1] * tile_size + OFFSET_Y, x[2]
 
 
 def get_random_map_number():
@@ -251,8 +251,9 @@ class Map:
         # уменьшить размер клетки в частости и координаты
         self.koeff = self.map.tilewidth / self.TILE_SIZE
         # Квадрат - границы карты
-        self.rect = pygame.rect.Rect((OFFSETX, OFFSETY),
-                                     (MAP_SIZE, MAP_SIZE))
+        self.rect = pygame.rect.Rect((OFFSET_X, OFFSET_Y),
+                                     (self.TILE_SIZE * self.width,
+                                      self.TILE_SIZE * self.height))
         # Получаем все слои из обекта карты и
         # проверяем наличие самых необходимых
         self.layers = list(self.map.layernames.keys())
@@ -300,8 +301,8 @@ class Map:
                 image = self.get_tile_image(x, y, layer)
                 if image is not None:
                     sc.blit(image, (
-                        x * self.TILE_SIZE + OFFSETX,
-                        y * self.TILE_SIZE + OFFSETY))
+                        x * self.TILE_SIZE + OFFSET_X,
+                        y * self.TILE_SIZE + OFFSET_Y))
 
     def check_(self, name):
         """Проверяет имеется ли слой в объекте карты"""
@@ -313,8 +314,8 @@ class Map:
         :return True если объект пересек границу
         :return False eсли объект не пересек границу"""
         if rect.y < self.rect.y or rect.x < self.rect.x \
-                or rect.right >= self.rect.right - rect.w / 7.31 \
-                or rect.bottom >= self.rect.bottom - rect.h / 6:
+                or rect.right >= self.rect.right \
+                or rect.bottom >= self.rect.bottom:
             return True
         return False
 
@@ -795,8 +796,8 @@ class Game:
         self.map = Map(number_level, MAP_SIZE)
         self.map_object = self.map.map
         self.TILE_SIZE = self.map.TILE_SIZE
-        self.MAP_SIZE = pygame.Rect(OFFSETX, OFFSETY,
-                                    MAP_SIZE + OFFSETX, MAP_SIZE + OFFSETY)
+        self.MAP_SIZE = pygame.Rect(OFFSET_X, OFFSET_Y,
+                                    MAP_SIZE + OFFSET_X, MAP_SIZE + OFFSET_Y)
         self.type_game = type_game
         self.real_level = number_level
         self.level = self.map.level
@@ -856,16 +857,16 @@ class Game:
         if not self.map.check_('walls'):
             return
         for i in self.map.get_objects('walls'):
-            x = (i.x / self.map.koeff) + OFFSETX
-            y = (i.y / self.map.koeff) + OFFSETY
+            x = (i.x / self.map.koeff) + OFFSET_X
+            y = (i.y / self.map.koeff) + OFFSET_Y
             Wall(x, y, self.map.get_tile_id(i.gid),
                  self.TILE_SIZE, self)
 
     def create_eagle(self):
         # Создаем объект орла
         tile = self.map.get_objects('eagle')[0]
-        x = tile.x / self.map.koeff + OFFSETX
-        y = tile.y / self.map.koeff + OFFSETY
+        x = tile.x / self.map.koeff + OFFSET_X
+        y = tile.y / self.map.koeff + OFFSET_Y
         return Eagle(self, x, y, self.TILE_SIZE)
 
     def update(self, events=None, keystate=None, mouse_state=None):

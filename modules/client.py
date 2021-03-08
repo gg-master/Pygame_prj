@@ -375,7 +375,7 @@ def main() -> None:
 
 
 if __name__ == '__main__':
-    WIDTH, HEIGHT = 980, 750
+    WIDTH, HEIGHT = 950, 750
     FPS = 60
     screen = pygame.display.set_mode((WIDTH, HEIGHT), pygame.RESIZABLE)
     monitor_size = [pygame.display.Info().current_w,
