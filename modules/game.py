@@ -29,22 +29,41 @@ TILE_FOR_MOBS = 17
 
 
 def set_constants_from_settings(screen_surf):
+    """
+    Изменяет размеры поля и отступов в зависимости от размера экрана
+    (поверхности, на которой будет производиться отрисовка)
+    :param screen_surf: экран для отрисовки
+    :return: None
+    """
     global MAP_SIZE, OFFSET, OFFSET_X, OFFSET_Y
+    # Устанавливаем минимальное значение отступа
     OFFSET = 40
-
+    # Узнаем размеры экрана
     sc_w, sc_h = screen_surf.get_size()
+    # Сразу вычитаем размеры отступов, для облегчения дальнейших вычислений
     sc_w -= 2 * OFFSET
     sc_h -= 2 * OFFSET
+    # Если ширина больше высоты, то нужно размещать экран по размеру высоты
+    # т.с мы максимально растягиваем поле по размеру экрана
     if sc_h <= sc_w:
+        # Размеры меню справа от поля
         menue_w = (sc_h / 13) * 3
+        # Итоговый размер игровой карты + меню
         size = sc_h + menue_w
+        # Коэффециент, отображающий во сколько раз ширина экрана
+        # отличается от размера поля
         k = sc_w / size
+        # Устанавливаем значение размера поля
         MAP_SIZE = int(sc_h * k) if k < 1 else sc_h
     else:
+        # Аналогичено что и выше, с разницой в том,
+        # что теперь мы рассматриваем ширину, и сравниваем размеры с высотой
         menue_w = (sc_w / 13) * 3
         size = sc_w + menue_w
         k = sc_w / size
         MAP_SIZE = int(sc_w * k) if k < 1 else sc_w
+    # Отступ по X и Y. Вычисляется таким образом,
+    # чтобы поле располагалось по центру экрана
     OFFSET_X = max(
         int((screen_surf.get_width() / 2) - size / 2), OFFSET)
     OFFSET_Y = max(int(screen_surf.get_height() / 2 - MAP_SIZE / 2), OFFSET)
@@ -56,6 +75,7 @@ def convert_coords(x, tile_size):
 
 
 def get_random_map_number():
+    # Возвращает рандомный номер карты из доступных
     available_numbers = list(
         map(lambda x: int(x.split('.')[0].split('map')[-1]),
             filter(lambda x: x.endswith('.tmx'),
