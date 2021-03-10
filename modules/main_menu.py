@@ -801,7 +801,7 @@ def down_drop_text(surf, image, rect):
         surf.blit(image, (WIDTH / 2 - rect.width / 2, y))
         screen.blit(surf, (0, 0))
         pg.display.flip()
-        clock.tick(240)
+        clock.tick(FPS)
 
 
 def generate_rules():
