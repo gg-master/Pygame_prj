@@ -18,7 +18,33 @@ def int_r(num):
     return num
 
 
-class Player(pygame.sprite.Sprite):
+class BaseMob:
+    def __init__(self, game, coords, tile_size):
+        self.game = game
+        self.TILE_SIZE = tile_size
+        # Записываем начальные координаты
+        self.coords = coords
+
+        self.side = 't'
+        self.available_side = ['t', 'l', 'b', 'r']
+        self.anti_side = {'r': 'l', 'l': 'r', 't': 'b', 'b': 't'}
+
+        self.mask = self.image = None
+
+        self.type_tanks = self.shield = None
+
+        self.move_trigger = self.hidden = self.isFreeze = self.with_shield = \
+            self.spawn_stopper = self.bullet_prof = False
+
+        self.bullet_speed = 5
+        self.bullet = None
+        self.last_shot = pygame.time.get_ticks()
+
+        self.speed_k = max(self.TILE_SIZE / 50, 0.6)
+        self.speed = int_r(2 * self.speed_k)  # 2
+
+
+class Player(pygame.sprite.Sprite, BaseMob):
     # Определение всех необходимых названий картинок для текстур танка
     images = {
         '1_t0': 't_y.png', '1_l0': 't_y_l.png', '1_r0': 't_y_r.png',
@@ -32,41 +58,27 @@ class Player(pygame.sprite.Sprite):
     }
 
     def __init__(self, game, coords, tile_size, player):
-        super().__init__(game.player_group, game.map_group, game.all_sprites)
-        self.game = game
-        self.TILE_SIZE = tile_size
-        self.side = 't'
+        pygame.sprite.Sprite.__init__(game.player_group, game.map_group,
+                                      game.all_sprites)
+        BaseMob.__init__(self, game, coords, tile_size)
         self.player = player
         self.type_tanks = 't1'
-        self.move_trigger = False
-
         self.killed_enemies = {'t1': [0, 0], 't2': [0, 0],
                                't3': [0, 0], 't4': [0, 0]}
         self.count_points = 0
-        self.speed_k = self.TILE_SIZE / 50
-        self.speed = int_r(2 * self.speed_k)  # 2
         self.lives = 2
 
-        self.bullet_prof = False
-        self.bullet = None
-        self.bullet_speed = 5
         self.shoot_delay = 200
-        self.last_shot = pygame.time.get_ticks()
+
         self.turning_turret_delay = 750
         self.turning_turret_timer = None
 
-        self.shield = None
-        self.hidden = self.with_shield = self.spawn_stopper = False
         # После объявления некоторых параметров для танка игрока
         # устанавливае значения для этип параметров в зависимости от типа танка
         self.set_properties()
 
-        # Размер клетки на поле
-        self.mask = self.image = None
         # Загружаем маску и картинку танка
         self.load_tanks_image()
-        # Записываем начальные координаты
-        self.coords = coords
         # Создаем прямоугольних из картинки, для обработки передвижения
         self.rect = self.image.get_rect()
         # Создаем прохрачную поверхность, которая будет отрисовываться
@@ -542,7 +554,7 @@ class EmptyBot(pygame.sprite.Sprite):
             pygame.Surface((self.rect.width, self.rect.height)))
 
 
-class Bot(pygame.sprite.Sprite):
+class Bot(pygame.sprite.Sprite, BaseMob):
     """
     Объект бота - вражеского танка
     """
@@ -567,41 +579,29 @@ class Bot(pygame.sprite.Sprite):
     }
 
     def __init__(self, game, coords, tile_size, type_bot: str, number_tank):
-        super().__init__(game.map_group, game.mobs_group, game.all_sprites)
-
-        self.game = game
-        self.TILE_SIZE = tile_size
+        pygame.sprite.Sprite.__init__(game.map_group,
+                                      game.mobs_group, game.all_sprites)
+        BaseMob.__init__(self, game, coords, tile_size)
         self.type_tanks = type_bot
         self.number = number_tank
-        self.side = 't'
         self.prev_side = 't'
-        self.available_side = ['t', 'l', 'b', 'r']
-        self.anti_side = {'r': 'l', 'l': 'r', 't': 'b', 'b': 't'}
         # Этот список содержит "набор сторон" в которые мы могли или не могли
         # Проехать. Если можем, то False, иначе True.
         self.sides_flags = [False, False, False, False]
         # Флаги, которые показывает остановился ли бот по
         # определенной координате
         self.is_stop_y = self.is_stop_x = False
-
-        self.move_trigger = self.is_bonus = self.bonus_trigger = False
+        self.is_bonus = self.bonus_trigger = False
         self.bonus_trigger_delay = 300
         self.bonus_trigger_timer = pygame.time.get_ticks()
         self.trigger_image = 3
 
-        self.isFreeze = self.spawn_stopper = self.hidden = False
-
-        self.speed_k = max(self.TILE_SIZE / 50, 0.6)
-        self.speed = int_r(2 * self.speed_k)
         self.speedx = self.speedy = 0
 
         self.lives = 1
 
         self.can_shoot = True
-        self.bullet = None
-        self.bullet_speed = 5
         self.shoot_delay = 300
-        self.last_shot = pygame.time.get_ticks()
 
         self.start_time = pygame.time.get_ticks()
         self.change_side_timer = 2000
@@ -612,10 +612,8 @@ class Bot(pygame.sprite.Sprite):
         # задаем некоторым конкретные значения
         self.set_properties()
 
-        self.image = self.mask = None
         self.load_tanks_image()
         # Аналогично как и в классе игрока
-        self.coords = coords[:-1]
         self.rect = self.image.get_rect()
         self.none_image = pygame.Surface((self.rect.width, self.rect.height),
                                          pygame.SRCALPHA, 32)

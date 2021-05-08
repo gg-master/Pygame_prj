@@ -1,5 +1,5 @@
 # Pygame_prj
-Game on Pygame by Anatoliy Korshunov and Oleg Roldugin
+Game on Pygame by 2 creative developers.
 
 Чтобы запустить игру необходимо запустить файл main_menu.py из папки modules
 
