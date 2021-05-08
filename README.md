@@ -11,7 +11,7 @@
 Ознакомиться с подробным описанием нашего проекта, а также его технической составляющей можно в пояснительный записке к проекту (см. файл PZ_dlya_irgry.docx).
 
 <h3>Запуск</h3>
-<a href='https://drive.google.com/file/d/1dTjPf3GJn8iC5QDg-0xzShJfi_qaQ72O/view?usp=sharing'><h6>Скачать запускаемый exe файл.</h6></a>
+<a href='https://drive.google.com/file/d/1dTjPf3GJn8iC5QDg-0xzShJfi_qaQ72O/view?usp=sharing'><h5>Скачать запускаемый exe файл.</h5></a>
 
 <h5>Запуск из кода</h5>Необходимые библиотеки (не идут вместе с python):
 1) Pygame
