@@ -19,29 +19,38 @@ def int_r(num):
 
 
 class BaseMob:
+    """
+    Базовый класс для мобов. Содержит параметры, которые используются
+    как в классе игрока, так и в классе моба.
+    """
     def __init__(self, game, coords, tile_size):
+        # Объект игры
         self.game = game
+        # Размер клетки
         self.TILE_SIZE = tile_size
         # Записываем начальные координаты
         self.coords = coords
-
+        # Сторона при спавне
         self.side = 't'
+        # Доступные стороны и их анти стороны (необходимы в некоторых функциях)
         self.available_side = ['t', 'l', 'b', 'r']
         self.anti_side = {'r': 'l', 'l': 'r', 't': 'b', 'b': 't'}
-
-        self.mask = self.image = None
-
+        # Объявление остальных переменных
         self.type_tanks = self.shield = None
+
+        self.speed_k = max(self.TILE_SIZE / 50, 0.6)
+        self.speed = int_r(2 * self.speed_k)  # 2
 
         self.move_trigger = self.hidden = self.isFreeze = self.with_shield = \
             self.spawn_stopper = self.bullet_prof = False
 
+        self.mask = self.image = None
+        # Некоторые переменные для стрельбы
         self.bullet_speed = 5
+        # Объект пули
         self.bullet = None
+        # Время последнего выстрела
         self.last_shot = pygame.time.get_ticks()
-
-        self.speed_k = max(self.TILE_SIZE / 50, 0.6)
-        self.speed = int_r(2 * self.speed_k)  # 2
 
 
 class Player(pygame.sprite.Sprite, BaseMob):
@@ -58,8 +67,8 @@ class Player(pygame.sprite.Sprite, BaseMob):
     }
 
     def __init__(self, game, coords, tile_size, player):
-        pygame.sprite.Sprite.__init__(game.player_group, game.map_group,
-                                      game.all_sprites)
+        super().__init__(game.player_group, game.map_group, game.all_sprites)
+        # Вызываем инициализация нашего базового класса
         BaseMob.__init__(self, game, coords, tile_size)
         self.player = player
         self.type_tanks = 't1'
@@ -69,14 +78,11 @@ class Player(pygame.sprite.Sprite, BaseMob):
         self.lives = 2
 
         self.shoot_delay = 200
-
         self.turning_turret_delay = 750
         self.turning_turret_timer = None
-
         # После объявления некоторых параметров для танка игрока
         # устанавливае значения для этип параметров в зависимости от типа танка
         self.set_properties()
-
         # Загружаем маску и картинку танка
         self.load_tanks_image()
         # Создаем прямоугольних из картинки, для обработки передвижения
@@ -206,7 +212,7 @@ class Player(pygame.sprite.Sprite, BaseMob):
 
     def turning_turret(self):
         now = pygame.time.get_ticks()
-        if self.turning_turret_timer is not None and\
+        if self.turning_turret_timer is not None and \
                 now - self.turning_turret_timer < \
                 self.turning_turret_delay:
             self.game.add_music_track({f"{self.__class__.__name__}"
@@ -223,10 +229,9 @@ class Player(pygame.sprite.Sprite, BaseMob):
         :return: None: Только проверка может ли танк проехать в
             заданном направлении
         """
-        anti_side = {"r": 'l', 'l': 'r', 't': 'b', 'b': 't'}
         self.game.add_music_track({f"{self.__class__.__name__}"
                                    f"{self.player}": f'move_s{self.player}'})
-        if side not in [self.side, anti_side[self.side]]:
+        if side not in [self.side, self.anti_side[self.side]]:
             self.turning_turret_timer = pygame.time.get_ticks()
 
         # Устанавливаем сторону и загружаем изображение танка для новой стороны
@@ -347,7 +352,7 @@ class Player(pygame.sprite.Sprite, BaseMob):
         :return: True: Если координаты пересеклись
         :return: False: Если координаты не пересеклись
         """
-        if rect.x <= self.rect.x <= rect.x + rect.width\
+        if rect.x <= self.rect.x <= rect.x + rect.width \
                 or rect.y <= self.rect.y <= rect.y + rect.width:
             return True
         return False
@@ -429,7 +434,7 @@ class Bullet(pygame.sprite.Sprite):
                     c.kill()
                     return
             # Пуля врезалась в бота и при этом выстрел был от игрока
-            if c in self.game.mobs_group and\
+            if c in self.game.mobs_group and \
                     isinstance(self.who_shoot, Player):
                 if self.handling_recochet(c):
                     self.game.add_music_track(choice(['ric1b', 'ric2b']))
@@ -547,6 +552,7 @@ class EmptyBot(pygame.sprite.Sprite):
     определенном направлении.
     Объект имеет лишь маску и прямоугольник
     """
+
     def __init__(self, x, y, w, h):
         super().__init__()
         self.rect = pygame.Rect(x, y, w, h)
@@ -579,8 +585,7 @@ class Bot(pygame.sprite.Sprite, BaseMob):
     }
 
     def __init__(self, game, coords, tile_size, type_bot: str, number_tank):
-        pygame.sprite.Sprite.__init__(game.map_group,
-                                      game.mobs_group, game.all_sprites)
+        super().__init__(game.map_group, game.mobs_group, game.all_sprites)
         BaseMob.__init__(self, game, coords, tile_size)
         self.type_tanks = type_bot
         self.number = number_tank
@@ -592,6 +597,7 @@ class Bot(pygame.sprite.Sprite, BaseMob):
         # определенной координате
         self.is_stop_y = self.is_stop_x = False
         self.is_bonus = self.bonus_trigger = False
+
         self.bonus_trigger_delay = 300
         self.bonus_trigger_timer = pygame.time.get_ticks()
         self.trigger_image = 3
@@ -605,13 +611,13 @@ class Bot(pygame.sprite.Sprite, BaseMob):
 
         self.start_time = pygame.time.get_ticks()
         self.change_side_timer = 2000
-
+        # Цель, к которой движется бот
         self.target = None
+        # Количество очков за бота
         self.points = 100
         # Аналогично как и с игроком. После обозначения всех переменных,
         # задаем некоторым конкретные значения
         self.set_properties()
-
         self.load_tanks_image()
         # Аналогично как и в классе игрока
         self.rect = self.image.get_rect()
@@ -677,7 +683,7 @@ class Bot(pygame.sprite.Sprite, BaseMob):
         зависимости от типа танка
         :return: None
         """
-        self.isFreeze = False if\
+        self.isFreeze = False if \
             self.game.bot_manager.bonus_delay is None else True
         if self.number in [4, 11, 18]:
             self.is_bonus = True
@@ -716,14 +722,14 @@ class Bot(pygame.sprite.Sprite, BaseMob):
                 name = f'{self.side}{int(self.move_trigger)}_{self.lives}'
             elif self.lives == 2:
                 name = f"{self.side}{int(self.move_trigger)}_" \
-                    f"{self.trigger_image}"
+                       f"{self.trigger_image}"
         """Если у нас танк является бонусным, то он должен мигать"""
         if now - self.bonus_trigger_timer > self.bonus_trigger_delay and \
                 self.is_bonus:
             if now - self.bonus_trigger_timer > self.bonus_trigger_delay * 2:
                 self.bonus_trigger_timer = now
             name = f"{self.side}{int(self.move_trigger)}" \
-                f"{int(self.move_trigger)}"
+                   f"{int(self.move_trigger)}"
         return name
 
     def load_tanks_image(self, reload_mask=True):
@@ -837,9 +843,11 @@ class Bot(pygame.sprite.Sprite, BaseMob):
         Находит ближайшего игрока к объекту бота
         :return: player_rect - pygame.Rect
         """
+
         def hypot(x1, y1, x2, y2):
             # Возвращает расстояние между точками
             return (abs(x1 - x2) + abs(y1 - y2)) ** 0.5
+
         lens = {}
         # Перебираем всех игроков и записываем расстояние до них
         for i in self.game.player_group:
@@ -935,6 +943,7 @@ class Bot(pygame.sprite.Sprite, BaseMob):
     def move(self):
         """функция, отвечающая за передвижение бота
         """
+
         def just_drive():
             # Просто заставляет бота двигаться
             # работает с использованием random
@@ -971,8 +980,8 @@ class Bot(pygame.sprite.Sprite, BaseMob):
             if rez is not None and not rez[0]:
                 # Если уперлись в стенку, которую можно сломать, то мы можем
                 # Или объехать ее или выстрелить в нее
-                if rez[1] is not None and\
-                        isinstance(rez[1], Wall) and\
+                if rez[1] is not None and \
+                        isinstance(rez[1], Wall) and \
                         rez[1].isBroken and random() < 1 / 3:
                     self.shoot(custom=True)
                     return
@@ -987,6 +996,7 @@ class Bot(pygame.sprite.Sprite, BaseMob):
                 # в котором мы не могли ехать раньше, то сбрасываем флаг
                 # для этого направления
                 self.sides_flags[self.available_side.index(self.side)] = False
+
         # Если нет цели, то просто кружимся по карте
         if self.target is None:
             just_drive()
@@ -1046,14 +1056,14 @@ class Bot(pygame.sprite.Sprite, BaseMob):
         (одинаковые центральные координаты или координаты сторон одинаковы)
         то останавливаемся"""
         if (p_x == b_x and b_y == p_y) or \
-            (players_rect.left == self.rect.right and
-                players_rect.top <= b_y <= players_rect.bottom) or\
-            (players_rect.right == self.rect.left and
-                players_rect.top <= b_y <= players_rect.bottom) or\
-            (players_rect.top == self.rect.bottom and
-                players_rect.left <= b_x <= players_rect.right) or\
-            (players_rect.bottom == self.rect.top and
-                players_rect.left <= b_x <= players_rect.right):
+                (players_rect.left == self.rect.right and
+                 players_rect.top <= b_y <= players_rect.bottom) or \
+                (players_rect.right == self.rect.left and
+                 players_rect.top <= b_y <= players_rect.bottom) or \
+                (players_rect.top == self.rect.bottom and
+                 players_rect.left <= b_x <= players_rect.right) or \
+                (players_rect.bottom == self.rect.top and
+                 players_rect.left <= b_x <= players_rect.right):
             self.is_stop_y = False
             self.is_stop_x = False
             return None
@@ -1185,7 +1195,7 @@ class Eagle(pygame.sprite.Sprite):
         :return: True: Если координаты пересеклись
         :return: False: Если координаты не пересеклись
         """
-        if rect.x <= self.rect.x <= rect.x + rect.width\
+        if rect.x <= self.rect.x <= rect.x + rect.width \
                 or rect.y <= self.rect.y <= rect.y + rect.width:
             return True
         return False
@@ -1202,7 +1212,7 @@ class Eagle(pygame.sprite.Sprite):
             # их в металлические
             for kx, ky in [[-1, -1], [0, -1], [1, -1], [1, 0], [1, 1],
                            [0, 1], [-1, 1], [-1, 0]]:
-                x, y = self.rect.x + (kx * self.TILE_SIZE),\
+                x, y = self.rect.x + (kx * self.TILE_SIZE), \
                        self.rect.y + (ky * self.TILE_SIZE)
                 empty_b = EmptyBot(x, y, self.TILE_SIZE, self.TILE_SIZE)
                 c = pygame.sprite.spritecollideany(empty_b,
@@ -1298,9 +1308,9 @@ class Wall(pygame.sprite.Sprite):
         :return: None
         """
         x, y = coords
-        max_s = self.tile_size              # 50
+        max_s = self.tile_size  # 50
         half_s = max_s // 2 - max_s // 10 - 2  # 20
-        half_s2 = half_s + max_s // 5 + 4      # 30
+        half_s2 = half_s + max_s // 5 + 4  # 30
         if self.id == 11:
             if half_s <= x <= half_s2:
                 if 0 <= y <= half_s:
@@ -1496,7 +1506,7 @@ class Bonus(pygame.sprite.Sprite):
                 self.game.add_music_track('heal'
                                           if self.bonus == 't'
                                           else 'star' if self.bonus == 's'
-                                          else 'pistol')
+                else 'pistol')
         elif self.bonus in ['c', 'g']:
             self.game.add_music_track('grenade') if self.bonus == 'g' else ''
             self.game.bot_manager.activate_bonus(self.bonus)
@@ -1539,7 +1549,7 @@ class Shield(pygame.sprite.Sprite):
     def update(self, *args):
         if not self.player.hidden:
             now = pygame.time.get_ticks()
-            self.shield_timer = now if self.shield_timer is None\
+            self.shield_timer = now if self.shield_timer is None \
                 else self.shield_timer
             if now - self.shield_timer > self.shield_duration:
                 self.player.with_shield = False
