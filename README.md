@@ -77,7 +77,7 @@ client = Client(1, 1, screen)
         * Ширина и Высота - 13 тайлов
 3. Добавить (если еще не добавлен) новый набор тайлов.<br>
 * Вот доступные картинки тайлов и их описание<br>
-![alt tag](https://disk.yandex.ru/i/pepn8fJ4sUWvFg "Тайлы и их краткое описание")
+![Тайлы и их краткое описание](https://s392man.storage.yandex.net/rdisk/5b2d7bb9e8bd9ed4d3106d5c73600e43b835f71a27ab6ef10f1ededbf5087a62/609c6059/i6V5oWDbB6CHAdny-YLqXiCxgxkSM5JkfArkAk4ZAzHVke4ETUq5ED9gEmvoC811p4yPOHF8bXw6bxHOpU0nAg==?uid=162033519&filename=tileds_inst.png&disposition=inline&hash=&limit=0&content_type=image%2Fpng&owner_uid=162033519&fsize=69096&hid=db04479de46b3ec9d426f10f5f601a7f&media_type=image&tknv=v2&etag=59720350c67ac750732f3c1339840b85&rtoken=sVeFZFcy5Hwt&force_default=yes&ycrid=na-78403ff770a66c6e3d5a1b3ed6e8d2cc-downloader9f&ts=5c22a1d260840&s=581e0103a34026a2a5ef03aa0cc0d21d3a194e3a45ee40db354cbcfdf3750d54&pb=U2FsdGVkX1-zUWwKqTQPtvlDBykID4Wauyls3pf85WLcL4OG2IcDnqw36Zb-Ud56a5fnQuTt9cmvv7c_CANs5DHvypjWnNXLOFyg_AMSTwo "Тайлы и их краткое описание")
 
 * Вот настройки, который необходимо выставить в Tiled Map Editor
 
