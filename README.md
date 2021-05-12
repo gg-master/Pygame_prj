@@ -33,6 +33,7 @@
 <h6><a href='https://drive.google.com/file/d/1dTjPf3GJn8iC5QDg-0xzShJfi_qaQ72O/view?usp=sharing'>Скачать запускаемый exe файл.</a></h6>
 
 <h5>Запуск из кода</h5>Необходимые библиотеки (не идут вместе с python):
+
 1) Pygame
 2) pytmx
 
