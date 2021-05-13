@@ -159,6 +159,7 @@ client = Client(1, 1, screen)
 Для выхода из программы следует нажать кнопку выхода в главном меню игры.
 
 <h3>Как создать свою карту?</h3><a name='Create-My-Map'></a>
+
 <a href='https://disk.yandex.ru/i/rTrloFBfNy1iGQ'><h4>Видео демонстрация создания карты для игры</h4></a>
 1. Необходимо установить приложение Tiled Map Editor. 
 <a href='https://www.mapeditor.org/'>Вот офф сайт</a>
